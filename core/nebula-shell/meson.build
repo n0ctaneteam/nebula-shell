@@ -48,6 +48,7 @@ nebula_sources = files(
     'monitor.vala',
     'layer_shell.vala',
     'window.vala',
+    'panel.vala',
     'workspace.vala',
     'window_info.vala',
     'monitor_info.vala',

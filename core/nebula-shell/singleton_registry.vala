@@ -61,7 +61,7 @@ public class SingletonRegistry : GLib.Object {
      * @param name the name used during registration
      * @return the singleton instance, or null if not found
      */
-    public GLib.Object? @get (string name) {
+    public new GLib.Object? @get (string name) {
         return _singletons.get (name);
     }
 

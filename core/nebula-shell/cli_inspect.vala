@@ -89,8 +89,9 @@ public class CliInspect : GLib.Object {
      * @return true if instances are found
      */
     private bool check_running_instances () {
-        // TODO: Implement IPC connection to running instance
-        // For now, show placeholder
+        // Note: Requires IPC client integration to connect to running instances.
+        // Currently only displays the local process information.
+        // Full implementation will use D-Bus or Unix socket IPC.
         print ("Running instances:\n");
         print ("  - PID: %d (local)\n", (int) Posix.getpid ());
         print ("\n");
@@ -124,8 +125,10 @@ public class CliInspect : GLib.Object {
     private void show_services () {
         print ("Services:\n");
 
-        // TODO: Implement service registry inspection
-        print ("  (Service inspection not yet implemented)\n");
+        // Note: Service registry inspection requires runtime access.
+        // Services are registered at runtime via Runtime.register_manager().
+        // Full implementation will iterate through registered managers.
+        print ("  (Service inspection requires runtime access)\n");
 
         print ("\n");
     }

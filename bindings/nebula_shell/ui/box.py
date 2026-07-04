@@ -9,6 +9,7 @@ Use spacing to add gaps between children.
 from enum import Enum
 from typing import Optional
 
+from nebula_shell._gi import Box as _GIBox, Orientation as _GIOrientation
 from nebula_shell.ui.container import Container
 
 
@@ -59,9 +60,9 @@ class Box(Container):
             name: Optional human-readable identifier.
         """
         super().__init__(name)
+        gi_orientation = _GIOrientation.HORIZONTAL if orientation == Orientation.HORIZONTAL else _GIOrientation.VERTICAL
+        self._widget = _GIBox(orientation=gi_orientation)
         self._orientation = orientation
-        self._spacing = 0
-        self._alignment = Alignment.START
 
     @property
     def orientation(self) -> Orientation:
@@ -71,21 +72,23 @@ class Box(Container):
     @orientation.setter
     def orientation(self, value: Orientation) -> None:
         self._orientation = value
+        gi_orientation = _GIOrientation.HORIZONTAL if value == Orientation.HORIZONTAL else _GIOrientation.VERTICAL
+        self._widget.set_orientation(gi_orientation)
 
     @property
     def spacing(self) -> int:
         """Spacing between children in logical pixels."""
-        return self._spacing
+        return self._widget.get_spacing()
 
     @spacing.setter
     def spacing(self, value: int) -> None:
-        self._spacing = value
+        self._widget.set_spacing(value)
 
     @property
     def alignment(self) -> Alignment:
         """Alignment of children within the box."""
-        return self._alignment
+        return Alignment(self._widget.get_alignment())
 
     @alignment.setter
     def alignment(self, value: Alignment) -> None:
-        self._alignment = value
+        self._widget.set_alignment(value.value)

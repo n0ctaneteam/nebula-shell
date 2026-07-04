@@ -15,22 +15,9 @@ internal class AnimationScheduler : NebulaShell.Object, Manager {
     private const double TARGET_FPS = 60.0;
     private const double FRAME_INTERVAL_MS = 1000.0 / TARGET_FPS;
 
-    private static AnimationScheduler? instance = null;
-
     private GLib.List<AnimationEntry> _active;
     private uint _frame_source_id = 0;
     private int64 _start_time = 0;
-
-    /**
-     * Get the default scheduler instance.
-     *
-     * @return the singleton scheduler
-     */
-    public static AnimationScheduler get_default () {
-        if (instance == null)
-            instance = new AnimationScheduler ();
-        return instance;
-    }
 
     private AnimationScheduler () {
         base.with_name ("animation-scheduler");
@@ -57,24 +44,6 @@ internal class AnimationScheduler : NebulaShell.Object, Manager {
      */
     public void reload () {
         // Nothing to reload
-    }
-
-    /**
-     * Schedule an animation for execution.
-     *
-     * @param animation the animation to schedule
-     */
-    public void schedule (Animation animation) {
-        if (animation.is_running) return;
-
-        var entry = new AnimationEntry (animation);
-        _active.append (entry);
-
-        animation.start ();
-
-        if (_frame_source_id == 0) {
-            start_frame_loop ();
-        }
     }
 
     /**

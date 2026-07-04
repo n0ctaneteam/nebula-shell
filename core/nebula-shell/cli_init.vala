@@ -94,7 +94,7 @@ public class CliInit : GLib.Object {
      */
     private bool create_directory (string path) {
         try {
-            var dir = GLib.Dir.open (path);
+            GLib.Dir.open (path);
             print ("Created: %s/\n", path);
             return true;
         } catch (GLib.Error e) {

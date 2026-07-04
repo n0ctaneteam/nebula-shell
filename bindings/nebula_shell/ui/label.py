@@ -7,6 +7,7 @@ It supports text content, font styling, alignment, and wrapping.
 
 from typing import Optional
 
+from nebula_shell._gi import Label as _GILabel
 from nebula_shell.ui.widget import Widget
 
 
@@ -32,32 +33,29 @@ class Label(Widget):
             name: Optional human-readable identifier.
         """
         super().__init__(name)
+        self._widget = _GILabel(text=text)
         self._text = text
-        self._wrap = False
-        self._max_width = -1
-        self._xalign = "start"
 
     @property
     def text(self) -> str:
         """The text content displayed by this label."""
-        return self._text
+        return self._widget.get_property("text")
 
     @text.setter
     def text(self, value: str) -> None:
         if self._text == value:
             return
         self._text = value
-        if self._widget is not None:
-            self._widget.set_property("text", value)
+        self._widget.set_property("text", value)
 
     @property
     def wrap(self) -> bool:
         """Whether the label text wraps to multiple lines."""
-        return self._wrap
+        return self._widget.get_wrap()
 
     @wrap.setter
     def wrap(self, value: bool) -> None:
-        self._wrap = value
+        self._widget.set_wrap(value)
 
     @property
     def max_width(self) -> int:
@@ -66,11 +64,11 @@ class Label(Widget):
         Only effective when wrap is True.
         A value of -1 means no limit.
         """
-        return self._max_width
+        return self._widget.get_max_width_chars()
 
     @max_width.setter
     def max_width(self, value: int) -> None:
-        self._max_width = value
+        self._widget.set_max_width_chars(value)
 
     @property
     def xalign(self) -> str:
@@ -78,10 +76,17 @@ class Label(Widget):
 
         Valid values: "start", "center", "end".
         """
-        return self._xalign
+        align = self._widget.get_xalign()
+        if align <= 0.25:
+            return "start"
+        elif align <= 0.75:
+            return "center"
+        else:
+            return "end"
 
     @xalign.setter
     def xalign(self, value: str) -> None:
         if value not in ("start", "center", "end"):
             raise ValueError(f"Invalid xalign value: {value}")
-        self._xalign = value
+        align_map = {"start": 0.0, "center": 0.5, "end": 1.0}
+        self._widget.set_xalign(align_map[value])

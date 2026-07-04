@@ -332,18 +332,6 @@ public abstract class Window : NebulaShell.Object {
     }
 
     /**
-     * Get the underlying GtkWindow.
-     *
-     * This method is internal and should not be used by
-     * public API consumers.
-     *
-     * @return the internal GtkWindow, or null if not created
-     */
-    internal Gtk.Window? get_gtk_window () {
-        return _gtk_window;
-    }
-
-    /**
      * Ensure the internal GtkWindow exists.
      *
      * Creates the window if it does not exist. Subclasses

@@ -1,6 +1,6 @@
 # Contributing to Nebula Shell
 
-Version: 0.1.0
+Version: 1.0.0
 
 Guidelines for contributing to the Nebula Shell project.
 

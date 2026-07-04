@@ -401,18 +401,12 @@ public class ThemeManager : GLib.Object, Manager {
         if (_css_provider == null)
             return;
 
-        try {
-            unowned uint8[] css_bytes = theme.get_css_content ().make_valid ().data;
-            _css_provider.load_from_data (css_bytes);
-            Gtk.StyleContext.add_provider_for_display (
-                Gdk.Display.get_default (),
-                _css_provider,
-                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-            );
-        } catch (GLib.Error e) {
-            Logger.error ("ThemeManager: failed to apply CSS: " + e.message);
-            theme_error (theme.name, "Failed to apply CSS: " + e.message);
-        }
+        _css_provider.load_from_string (theme.get_css_content ().make_valid ());
+        Gtk.StyleContext.add_provider_for_display (
+            Gdk.Display.get_default (),
+            _css_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        );
     }
 
     /**

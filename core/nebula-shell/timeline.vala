@@ -180,49 +180,6 @@ public class Timeline : NebulaShell.Object {
         completed ();
     }
 
-    /**
-     * Internal: Called by the scheduler to advance the timeline.
-     *
-     * @return true if timeline should continue
-     */
-    internal bool advance (double elapsed_ms) {
-        if (_is_cancelled) return false;
-
-        bool any_running = false;
-
-        foreach (var entry in _entries) {
-            if (entry.completed) continue;
-
-            if (!entry.started) {
-                if (elapsed_ms >= entry.delay) {
-                    entry.animation.start ();
-                    entry.started = true;
-                } else {
-                    any_running = true;
-                    continue;
-                }
-            }
-
-            if (entry.started && !entry.completed) {
-                double local_elapsed = elapsed_ms - entry.delay;
-                bool should_continue = entry.animation.advance (local_elapsed);
-                if (!should_continue) {
-                    entry.completed = true;
-                } else {
-                    any_running = true;
-                }
-            }
-        }
-
-        if (!any_running) {
-            _is_running = false;
-            completed ();
-            return false;
-        }
-
-        return true;
-    }
-
     private void cancel_source () {
         if (_source_id != 0) {
             Source.remove (_source_id);

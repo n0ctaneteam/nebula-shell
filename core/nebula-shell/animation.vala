@@ -68,9 +68,12 @@ public abstract class Animation : NebulaShell.Object {
      *
      * Controls the acceleration curve. Default is linear.
      */
-    public EasingFunc easing {
-        get { return _easing; }
-        set { _easing = value; }
+    public EasingFunc get_easing () {
+        return _easing;
+    }
+
+    public void set_easing (EasingFunc value) {
+        _easing = value;
     }
 
     /**

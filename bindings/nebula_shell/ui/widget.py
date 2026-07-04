@@ -7,6 +7,8 @@ Widgets display information but never fetch it.
 
 from typing import Optional, Callable, Any
 
+from nebula_shell._gi import Widget as _GIWidget
+
 
 class Widget:
     """Base class for all Nebula Shell widgets.
@@ -30,7 +32,7 @@ class Widget:
         Args:
             name: Optional human-readable identifier for this widget.
         """
-        self._widget = None
+        self._widget = _GIWidget()
         self._name = name
         self._signal_handlers: dict[str, list[Callable]] = {}
 

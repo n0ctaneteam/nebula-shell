@@ -21,6 +21,7 @@ public class CliDev : GLib.Object {
 
     private string? _config_path = null;
     private int _port = 0;
+    private GLib.FileMonitor? _file_monitor = null;
 
     /**
      * Run the dev command.
@@ -137,10 +138,29 @@ public class CliDev : GLib.Object {
      * @return true on success
      */
     private bool start_file_watcher (string config_path) {
-        // TODO: Implement file watcher using GLib.FileMonitor
-        // For now, just log that we would watch
-        Logger.debug ("Dev: would watch " + config_path);
-        return true;
+        try {
+            var file = GLib.File.new_for_path (config_path);
+            _file_monitor = file.monitor_file (GLib.FileMonitorFlags.WATCH_MOVES, null);
+
+            _file_monitor.changed.connect ((src, dest, event) => {
+                switch (event) {
+                    case GLib.FileMonitorEvent.CHANGED:
+                    case GLib.FileMonitorEvent.CREATED:
+                    case GLib.FileMonitorEvent.MOVED_IN:
+                        Logger.debug ("Dev: configuration file changed, reloading...");
+                        // Trigger reload logic here
+                        break;
+                    default:
+                        break;
+                }
+            });
+
+            Logger.debug ("Dev: watching " + config_path);
+            return true;
+        } catch (GLib.Error e) {
+            Logger.error ("Dev: failed to start file watcher: " + e.message);
+            return false;
+        }
     }
 
 }

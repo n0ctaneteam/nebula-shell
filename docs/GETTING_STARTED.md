@@ -1,6 +1,6 @@
 # Getting Started with Nebula Shell
 
-Version: 0.1.0
+Version: 1.0.0
 
 This guide walks you through creating your first Nebula Shell desktop component.
 

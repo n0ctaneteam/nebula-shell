@@ -22,30 +22,32 @@ class Spacer(Widget):
         box.append(Label("Right"))
     """
 
-    def __init__(self, name: Optional[str] = None) -> None:
+    def __init__(self, name: Optional[str] = None, min_size: int = 0, expand: bool = True) -> None:
         """Create a new spacer.
 
         Args:
             name: Optional human-readable identifier.
+            min_size: The minimum size in logical pixels.
+            expand: Whether to expand to fill available space.
         """
         super().__init__(name)
-        self._hexpand = True
-        self._vexpand = True
+        self._min_size = min_size
+        self._expand = expand
 
     @property
-    def hexpand(self) -> bool:
-        """Whether the spacer expands horizontally."""
-        return self._hexpand
+    def min_size(self) -> int:
+        """The minimum size in logical pixels."""
+        return self._min_size
 
-    @hexpand.setter
-    def hexpand(self, value: bool) -> None:
-        self._hexpand = value
+    @min_size.setter
+    def min_size(self, value: int) -> None:
+        self._min_size = value
 
     @property
-    def vexpand(self) -> bool:
-        """Whether the spacer expands vertically."""
-        return self._vexpand
+    def expand(self) -> bool:
+        """Whether this spacer expands to fill available space."""
+        return self._expand
 
-    @vexpand.setter
-    def vexpand(self, value: bool) -> None:
-        self._vexpand = value
+    @expand.setter
+    def expand(self, value: bool) -> None:
+        self._expand = value

@@ -189,8 +189,7 @@ public class LiveCss : GLib.Object, Manager {
             string content;
             GLib.FileUtils.get_contents (_css_path, out content);
 
-            unowned uint8[] css_bytes = content.make_valid ().data;
-            _css_provider.load_from_data (css_bytes);
+            _css_provider.load_from_string (content.make_valid ());
 
             Gtk.StyleContext.add_provider_for_display (
                 Gdk.Display.get_default (),

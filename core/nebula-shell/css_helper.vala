@@ -267,14 +267,8 @@ public class CssHelper {
      * @return true if loaded successfully
      */
     public static bool load_css (Gtk.CssProvider provider, string css) {
-        try {
-            unowned uint8[] css_bytes = css.make_valid ().data;
-            provider.load_from_data (css_bytes);
-            return true;
-        } catch (GLib.Error e) {
-            Logger.error ("CssHelper: failed to load CSS: " + e.message);
-            return false;
-        }
+        provider.load_from_string (css.make_valid ());
+        return true;
     }
 
     /**

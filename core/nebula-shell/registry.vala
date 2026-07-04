@@ -42,7 +42,7 @@ public class ObjectRegistry<T> : GLib.Object {
      * @param name the name used during registration
      * @return the registered object, or null if not found
      */
-    public T? @get (string name) {
+    public new T? @get (string name) {
         return _items.get (name);
     }
 

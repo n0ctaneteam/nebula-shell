@@ -1,6 +1,6 @@
 # Nebula Shell API Reference
 
-Version: 0.1.0
+Version: 1.0.0
 
 Complete reference for the Nebula Shell public API.
 

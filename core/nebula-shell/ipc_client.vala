@@ -251,12 +251,8 @@ public class IpcClient : Ipc, GLib.Object {
             return;
 
         if (_event_handlers.contains (event.method)) {
-            try {
-                var holder = _event_handlers.get (event.method);
-                holder.handler (event.method, event.payload);
-            } catch (Error e) {
-                Logger.warning ("IPC: event handler error: " + e.message);
-            }
+            var holder = _event_handlers.get (event.method);
+            holder.handler (event.method, event.payload);
         }
     }
 

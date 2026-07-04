@@ -283,21 +283,13 @@ public class IpcServer : Ipc, GLib.Object {
             return;
         }
 
-        try {
-            var holder = _handlers.get (request.method);
-            string? result = holder.handler (request.method, request.payload);
-            var response = new IpcMessage (
-                IpcMessageType.RESPONSE, request.id, null, result
-            );
-            response.status = 0;
-            send_to_all (response);
-        } catch (Error e) {
-            var response = new IpcMessage (
-                IpcMessageType.ERROR, request.id, null, null
-            );
-            response.status = 500;
-            send_to_all (response);
-        }
+        var holder = _handlers.get (request.method);
+        string? result = holder.handler (request.method, request.payload);
+        var response = new IpcMessage (
+            IpcMessageType.RESPONSE, request.id, null, result
+        );
+        response.status = 0;
+        send_to_all (response);
     }
 
     private void handle_event_message (IpcMessage event) {
@@ -305,12 +297,8 @@ public class IpcServer : Ipc, GLib.Object {
             return;
 
         if (_event_handlers.contains (event.method)) {
-            try {
-                var holder = _event_handlers.get (event.method);
-                holder.handler (event.method, event.payload);
-            } catch (Error e) {
-                Logger.warning ("IPC: event handler error: " + e.message);
-            }
+            var holder = _event_handlers.get (event.method);
+            holder.handler (event.method, event.payload);
         }
     }
 

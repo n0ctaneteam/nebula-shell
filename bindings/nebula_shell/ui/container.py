@@ -7,6 +7,7 @@ It manages the lifecycle of child widgets: append, prepend, remove, and clear.
 
 from typing import Optional, Iterator
 
+from nebula_shell._gi import Container as _GIContainer
 from nebula_shell.ui.widget import Widget
 
 
@@ -33,6 +34,7 @@ class Container(Widget):
             name: Optional human-readable identifier for this container.
         """
         super().__init__(name)
+        self._widget = _GIContainer()
 
     def append(self, child: Widget) -> None:
         """Append a child widget to the end.

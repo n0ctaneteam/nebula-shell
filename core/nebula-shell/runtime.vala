@@ -32,26 +32,6 @@ internal class Runtime : NebulaShell.Object, Manager {
     }
 
     /**
-     * Retrieve a manager registered with the kernel.
-     *
-     * @param name the name used during registration
-     * @return the manager, or null if not found
-     */
-    public Manager? get_manager (string name) {
-        return kernel.get_manager (name);
-    }
-
-    /**
-     * Check whether a manager is registered with the kernel.
-     *
-     * @param name the name to check
-     * @return true if registered
-     */
-    public bool has_manager (string name) {
-        return kernel.has_manager (name);
-    }
-
-    /**
      * Register a manager with the kernel.
      *
      * @param name unique name for discovery

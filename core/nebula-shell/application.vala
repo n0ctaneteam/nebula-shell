@@ -1,31 +1,55 @@
 namespace NebulaShell {
 
-public class Application : Gtk.Application {
+public class Application : NebulaShell.Object {
 
+    private Gtk.Application _gtk_app;
     private Runtime runtime;
 
     public Application () {
 
-        GLib.Object(
+        base.with_name ("application");
 
-            application_id: "io.github.n0ctaneteam.NebulaShell",
+        _gtk_app = new Gtk.Application (
 
-            flags: ApplicationFlags.DEFAULT_FLAGS
+            "io.github.n0ctaneteam.NebulaShell",
+
+            ApplicationFlags.DEFAULT_FLAGS
         );
+
+        _gtk_app.activate.connect (on_activate);
+        _gtk_app.shutdown.connect (on_shutdown);
 
         runtime = Runtime.get_default();
     }
 
-    protected override void activate () {
+    private void on_activate () {
 
         runtime.initialize();
     }
 
-    public override void shutdown () {
+    private void on_shutdown () {
 
         runtime.shutdown();
+    }
 
-        base.shutdown();
+    public void run () {
+
+        _gtk_app.run (null);
+    }
+
+    public void quit () {
+
+        _gtk_app.quit ();
+    }
+
+    public void reload () {
+
+        runtime.reload();
+    }
+
+    public bool get_is_running () {
+
+        return _gtk_app.get_is_registered ();
     }
 
 }

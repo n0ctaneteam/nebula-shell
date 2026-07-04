@@ -86,7 +86,7 @@ public class Config : GLib.Object {
      * @param key dot-separated path to the value
      * @return the value, or null if not found
      */
-    public GLib.Value? @get (string key) {
+    public new GLib.Value? @get (string key) {
         return _values.get (key);
     }
 
@@ -96,7 +96,7 @@ public class Config : GLib.Object {
      * @param key dot-separated path to the value
      * @param value the value to store
      */
-    public void @set (string key, owned GLib.Value? value) {
+    public new void @set (string key, owned GLib.Value? value) {
         _values.set (key, (owned) value);
     }
 

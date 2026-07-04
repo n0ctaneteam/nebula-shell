@@ -1,6 +1,6 @@
 # Nebula Shell Examples
 
-Version: 0.1.0
+Version: 1.0.0
 
 Example code and explanations for building Nebula Shell components.
 

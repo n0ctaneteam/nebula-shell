@@ -47,6 +47,7 @@ class Overlay(Container):
         """
         super().__init__(name)
         self._default_alignment = OverlayAlignment.CENTER
+        self._child_alignments: dict[int, OverlayAlignment] = {}
 
     @property
     def default_alignment(self) -> OverlayAlignment:
@@ -64,7 +65,8 @@ class Overlay(Container):
             child: The widget to align.
             alignment: The alignment position.
         """
-        pass
+        child_id = id(child)
+        self._child_alignments[child_id] = alignment
 
     def get_child_alignment(self, child) -> OverlayAlignment:
         """Get the alignment for a specific child.
@@ -75,4 +77,5 @@ class Overlay(Container):
         Returns:
             The alignment, or the default alignment.
         """
-        return self._default_alignment
+        child_id = id(child)
+        return self._child_alignments.get(child_id, self._default_alignment)

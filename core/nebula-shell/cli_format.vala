@@ -103,9 +103,6 @@ public class CliFormat : GLib.Object {
         }
 
         // Search for config files in current directory
-        string cwd = GLib.Path.get_dirname (GLib.Path.get_basename ("."));
-
-        // Check for common config file names
         string[] candidates = {
             "config.py",
             "style.css",

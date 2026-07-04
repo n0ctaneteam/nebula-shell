@@ -129,7 +129,7 @@ public class ServiceRegistry : GLib.Object {
      * @param name the name used during registration
      * @return the service, or null if not found
      */
-    public Service? get (string name) {
+    public new Service? get (string name) {
         return _services.get (name);
     }
 

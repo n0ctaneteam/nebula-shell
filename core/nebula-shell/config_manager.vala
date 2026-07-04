@@ -74,9 +74,9 @@ public class ConfigManager : GLib.Object, Manager {
      * Initialize default configuration search paths.
      *
      * Search order (first found wins):
-     * 1. ~/.config/nebula-shell/config.py
-     * 2. $XDG_CONFIG_HOME/nebula-shell/config.py
-     * 3. /etc/nebula-shell/config.py
+     * 1. ~/.config/nebula-shell/shell.py
+     * 2. $XDG_CONFIG_HOME/nebula-shell/shell.py
+     * 3. /etc/nebula-shell/shell.py
      */
     private void initialize_search_paths () {
         string home = GLib.Environment.get_variable ("HOME") ?? "";
@@ -84,18 +84,18 @@ public class ConfigManager : GLib.Object, Manager {
 
         if (home.length > 0) {
             _search_paths.add (
-                GLib.Path.build_filename (home, ".config", "nebula-shell", "config.py")
+                GLib.Path.build_filename (home, ".config", "nebula-shell", "shell.py")
             );
         }
 
         if (xdg_config.length > 0) {
             _search_paths.add (
-                GLib.Path.build_filename (xdg_config, "nebula-shell", "config.py")
+                GLib.Path.build_filename (xdg_config, "nebula-shell", "shell.py")
             );
         }
 
         _search_paths.add (
-            GLib.Path.build_filename ("/", "etc", "nebula-shell", "config.py")
+            GLib.Path.build_filename ("/", "etc", "nebula-shell", "shell.py")
         );
     }
 

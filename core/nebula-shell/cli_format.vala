@@ -8,13 +8,13 @@ namespace NebulaShell {
  *
  * Usage:
  *   nebula-shell format
- *   nebula-shell format --config /path/to/config.py
+ *   nebula-shell format --config /path/to/shell.py
  *   nebula-shell format --check
  *
  * Example:
  *   $ nebula-shell format
  *   Formatting configuration files...
- *   Formatted: config.py
+ *   Formatted: shell.py
  *   Formatted: style.css
  *   Done!
  */
@@ -104,7 +104,7 @@ public class CliFormat : GLib.Object {
 
         // Search for config files in current directory
         string[] candidates = {
-            "config.py",
+            "shell.py",
             "style.css",
             "theme.css"
         };

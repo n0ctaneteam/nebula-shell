@@ -16,7 +16,7 @@ namespace NebulaShell {
  *   $ nebula-shell init --name my-shell
  *   Initializing NebulaShell project 'my-shell'...
  *   Created: my-shell/
- *   Created: my-shell/config.py
+ *   Created: my-shell/shell.py
  *   Created: my-shell/style.css
  *   Project initialized successfully!
  */
@@ -68,7 +68,7 @@ public class CliInit : GLib.Object {
             return 1;
         }
 
-        // Create config.py
+        // Create shell.py
         if (!create_config_file ()) {
             return 1;
         }
@@ -94,7 +94,11 @@ public class CliInit : GLib.Object {
      */
     private bool create_directory (string path) {
         try {
-            GLib.Dir.open (path);
+            if (GLib.FileUtils.test (path, GLib.FileTest.EXISTS)) {
+                print ("Using existing: %s/\n", path);
+                return true;
+            }
+            GLib.DirUtils.create_with_parents (path, 0755);
             print ("Created: %s/\n", path);
             return true;
         } catch (GLib.Error e) {
@@ -120,7 +124,7 @@ panel.show()
 app.run()
 """;
 
-        string config_path = GLib.Path.build_filename (_path, "config.py");
+        string config_path = GLib.Path.build_filename (_path, "shell.py");
 
         try {
             GLib.FileUtils.set_contents (config_path, config_content);

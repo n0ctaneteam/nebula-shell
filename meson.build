@@ -14,3 +14,15 @@ gnome = import('gnome')
 
 subdir('core')
 subdir('tests')
+
+# Default shell configuration
+install_data(
+    'data/shell.py',
+    install_dir: get_option('sysconfdir') / 'nebula-shell',
+)
+
+# XDG autostart
+install_data(
+    'data/nebula-shell.desktop',
+    install_dir: get_option('datadir') / 'xdg' / 'autostart',
+)

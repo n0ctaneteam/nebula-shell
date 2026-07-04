@@ -12,7 +12,7 @@ namespace NebulaShell {
  *
  * Example:
  *   var hot_reload = new HotReload();
- *   hot_reload.set_watch_path("/path/to/config.py");
+ *   hot_reload.set_watch_path("/path/to/shell.py");
  *   hot_reload.initialize();
  */
 public class HotReload : GLib.Object, Manager {

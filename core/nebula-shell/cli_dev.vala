@@ -8,7 +8,7 @@ namespace NebulaShell {
  *
  * Usage:
  *   nebula-shell dev
- *   nebula-shell dev --config /path/to/config.py
+ *   nebula-shell dev --config /path/to/shell.py
  *   nebula-shell dev --port 8080
  *
  * Example:
@@ -112,15 +112,15 @@ public class CliDev : GLib.Object {
         string[] search_paths = {};
 
         if (home.length > 0) {
-            search_paths += GLib.Path.build_filename (home, ".config", "nebula-shell", "config.py");
+            search_paths += GLib.Path.build_filename (home, ".config", "nebula-shell", "shell.py");
         }
 
         if (xdg_config.length > 0) {
-            search_paths += GLib.Path.build_filename (xdg_config, "nebula-shell", "config.py");
+            search_paths += GLib.Path.build_filename (xdg_config, "nebula-shell", "shell.py");
         }
 
-        search_paths += GLib.Path.build_filename ("/", "etc", "nebula-shell", "config.py");
-        search_paths += "config.py";
+        search_paths += GLib.Path.build_filename ("/", "etc", "nebula-shell", "shell.py");
+        search_paths += "shell.py";
 
         foreach (string path in search_paths) {
             if (GLib.FileUtils.test (path, GLib.FileTest.EXISTS)) {

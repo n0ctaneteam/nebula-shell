@@ -13,7 +13,7 @@ namespace NebulaShell {
  * Example:
  *   var config_reload = new ConfigReload();
  *   config_reload.initialize();
- *   config_reload.set_config_path("/path/to/config.py");
+ *   config_reload.set_config_path("/path/to/shell.py");
  */
 public class ConfigReload : GLib.Object, Manager {
 

@@ -214,7 +214,7 @@ label.bind(battery.percentage, lambda p: f"{p}%")
 Configuration is Python. No custom DSL.
 
 ```python
-# config.py
+# shell.py
 from nebula_shell import *
 
 app = Application()

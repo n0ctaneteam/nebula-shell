@@ -26,13 +26,13 @@ class Application:
         """Create a new Nebula Shell application."""
         self._app = _Application()
 
-    def run(self) -> int:
+    def run(self) -> None:
         """Start the application event loop.
 
-        Returns:
-            Exit code from the application.
+        Initializes the runtime and enters the main loop.
+        This method blocks until quit() is called.
         """
-        return self._app.run()
+        self._app.run()
 
     def quit(self) -> None:
         """Quit the application immediately."""

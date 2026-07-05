@@ -400,10 +400,25 @@ class Window(Widget):
         self._title = value
 
     def add(self, child: 'Widget') -> None:
-        """Add a child widget to this window."""
-        if not hasattr(self, '_children'):
-            self._children = []
-        self._children.append(child)
+        """Add a child widget to this window.
+
+        Sets the root child widget on the underlying GI window.
+        Only one root child is allowed — calling add replaces
+        the previous child.
+        """
+        if hasattr(self._widget, 'set_child'):
+            gi_child = getattr(child, '_widget', None) or getattr(child, '_gi', None)
+            if gi_child is not None:
+                self._widget.set_child(gi_child)
+
+    @property
+    def child(self) -> Optional['Widget']:
+        """Get the root child widget of this window."""
+        gi_child = self._widget.get_child() if hasattr(self._widget, 'get_child') else None
+        if gi_child is None:
+            return None
+        from nebula_shell.ui.container import _wrap_widget
+        return _wrap_widget(gi_child)
 
     def show(self) -> None:
         """Show the window on screen.

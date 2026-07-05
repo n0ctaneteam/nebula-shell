@@ -556,6 +556,10 @@ def create_window():
 
 window = create_window()
 
+# Apply any CSS that was deferred (display wasn't ready during theme loading)
+if hasattr(Theme, 'apply_pending_css'):
+    Theme.apply_pending_css()
+
 # ---------------------------------------------------------------------------
 # Fade-in animation
 # ---------------------------------------------------------------------------

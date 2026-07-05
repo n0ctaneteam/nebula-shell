@@ -92,6 +92,7 @@ nebula_sources = files(
     'widget_inspector.vala',
     'performance_overlay.vala',
     'frame_timing.vala',
+    'renderer.vala',
 )
 
 nebula = library(
@@ -153,5 +154,17 @@ gir = gnome.generate_gir(
 
     dependencies: [glib_dep, gio_dep, gtk_dep],
 
-    install: true,
+    install: false,
+)
+
+# Patch and compile the GIR at install time.
+# g-ir-scanner fails to detect GObject.Object as parent of NebulaShell.Object.
+gir_file = meson.current_build_dir() / 'NebulaShell-1.0.gir'
+install_gir_script = meson.project_source_root() / 'tools' / 'install-gir.sh'
+
+meson.add_install_script(
+    install_gir_script,
+    gir_file,
+    get_option('datadir'),
+    get_option('libdir'),
 )

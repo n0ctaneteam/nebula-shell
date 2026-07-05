@@ -2,7 +2,8 @@ using NebulaShell;
 
 public class TestWindow : Window {
     public TestWindow () {
-        base ("test_window");
+        base ();
+        this.name = "test_window";
     }
 }
 

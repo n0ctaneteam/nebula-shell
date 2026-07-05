@@ -28,7 +28,9 @@ internal class Runtime : NebulaShell.Object, Manager {
     private Runtime () {
         base.with_name ("runtime");
         kernel = new Kernel ();
-        kernel.register ("runtime", this);
+        // NOTE: Runtime is the coordinator, NOT a managed component.
+        // Registering itself as a Manager caused kernel.boot() → runtime.initialize()
+        // → kernel.boot() infinite recursion → stack overflow → segfault.
     }
 
     /**

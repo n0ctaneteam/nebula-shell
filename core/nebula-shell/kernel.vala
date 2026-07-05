@@ -20,6 +20,7 @@ public class Kernel : NebulaShell.Object {
     private Gee.ArrayList<Manager> managers;
     private ObjectRegistry<Manager> manager_registry;
     private ServiceRegistry service_registry;
+    private bool _booting = false;
 
     public Kernel () {
         base.with_name ("kernel");
@@ -121,10 +122,13 @@ public class Kernel : NebulaShell.Object {
      * then services are initialized (in registration order).
      */
     public void boot () {
+        if (_booting) return;
+        _booting = true;
         foreach (var manager in managers) {
             manager.initialize ();
         }
         service_registry.initialize_all ();
+        _booting = false;
     }
 
     /**

@@ -195,10 +195,12 @@ public class Container : NebulaShell.Widget {
      * Emits `destroyed` signal.
      */
     public override void destroy () {
-        for (int i = _children.length - 1; i >= 0; i--) {
-            _children[i].destroy ();
-        }
+        // Snapshot children to avoid out-of-bounds if destroy handlers modify the list
+        var children_snapshot = _children;
         _children = {};
+        for (int i = children_snapshot.length - 1; i >= 0; i--) {
+            children_snapshot[i].destroy ();
+        }
         base.destroy ();
     }
 

@@ -21,25 +21,12 @@ namespace NebulaShell {
 public class Panel : NebulaShell.Window {
 
     /**
-     * Create a new panel.
+     * Panel defaults applied during GObject construction.
      *
-     * Defaults to top-anchored with exclusive zone.
+     * These values are stored in the Vala instance and applied
+     * when show() is called (which triggers ensure_gtk_window + apply_layer_shell_config).
      */
-    public Panel () {
-        base ("panel");
-        this.anchor = Anchor.TOP;
-        this.layer = Layer.TOP;
-        this.exclusive = true;
-        this.height = 32;
-    }
-
-    /**
-     * Create a new panel with a name.
-     *
-     * @param name human-readable identifier
-     */
-    public Panel.with_name (string name) {
-        base.with_name (name);
+    construct {
         this.anchor = Anchor.TOP;
         this.layer = Layer.TOP;
         this.exclusive = true;

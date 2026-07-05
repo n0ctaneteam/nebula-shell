@@ -24,6 +24,7 @@ class Theme:
     _themes_dir: Path = Path.home() / ".config" / "nebula-shell" / "themes"
     _provider: Optional[object] = None
     _current_name: Optional[str] = None
+    _pending_css: Optional[str] = None
 
     @classmethod
     def _ensure_provider(cls) -> object:
@@ -42,10 +43,16 @@ class Theme:
         """
         from gi.repository import Gtk, Gdk
 
+        display = Gdk.Display.get_default()
+        if display is None:
+            # Display not yet available — store CSS for later application
+            cls._pending_css = css
+            return
+
         provider = cls._ensure_provider()
         provider.load_from_string(css)
         Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(),
+            display,
             provider,
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
         )
@@ -130,3 +137,15 @@ class Theme:
             css: CSS content to apply.
         """
         Theme._apply_css(css)
+
+    @classmethod
+    def apply_pending_css(cls) -> None:
+        """Apply any CSS that was deferred because the display was not ready.
+
+        Call this after the first GtkWindow has been created and the
+        GDK display is available.
+        """
+        if cls._pending_css is not None:
+            css = cls._pending_css
+            cls._pending_css = None
+            cls._apply_css(css)

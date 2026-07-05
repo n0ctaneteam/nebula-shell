@@ -42,11 +42,11 @@ class Panel(Window):
             name: Optional human-readable identifier for this panel.
         """
         super().__init__(name)
-        self._anchor = Anchor.TOP
-        self._layer = Layer.TOP
-        self._exclusive = True
+        self.anchor = Anchor.TOP
+        self.layer = Layer.TOP
+        self.exclusive = True
         self.height = 32
-        self._keyboard_mode = KeyboardMode.NONE
+        self.keyboard_mode = KeyboardMode.NONE
 
     @property
     def children(self) -> list:

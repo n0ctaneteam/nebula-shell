@@ -1,11 +1,14 @@
 # Python
-__pycache__/
+__pycache__
 *.pyc
 *.pyo
 
 # Meson build
 builddir/
 builddir2/
+builddir3/
+builddir4/
+builddir5/
 build/
 
 # IDE

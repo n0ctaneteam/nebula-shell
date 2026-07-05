@@ -38,6 +38,9 @@ public abstract class Window : NebulaShell.Object {
     private int _margin_bottom = 0;
     private int _margin_left = 0;
     private int _margin_right = 0;
+    private Widget? _child = null;
+    private WidgetRenderer? _renderer = null;
+    private bool _layer_shell_initialized = false;
 
     /**
      * Emitted when the window is shown.
@@ -221,14 +224,12 @@ public abstract class Window : NebulaShell.Object {
     }
 
     /**
-     * Create a new window.
+     * Window is created via GObject construction.
      *
      * The underlying GtkWindow is not created until show() is called.
-     *
-     * @param name human-readable identifier for this window
      */
-    protected Window (string name) {
-        base.with_name (name);
+    construct {
+        /* intentionally empty — all init deferred to show() */
     }
 
     /**
@@ -247,7 +248,23 @@ public abstract class Window : NebulaShell.Object {
         apply_layer_shell_config ();
         apply_monitor ();
 
-        _gtk_window.present ();
+        // Defer present() to the next main loop iteration.
+        // GTK4's gtk_window_present() requires the main loop to be running
+        // and calling it before main_loop.run() causes a segfault on Wayland.
+        GLib.Idle.add (() => {
+            if (_gtk_window == null) return false;
+
+            // Guard: ensure the Wayland display is ready before presenting.
+            // If the display roundtrip hasn't completed, defer one more iteration.
+            var display = _gtk_window.get_display ();
+            if (display == null) {
+                return true; // re-try on next idle iteration
+            }
+
+            _gtk_window.present ();
+            return false; // remove idle source after firing
+        });
+
         _visible = true;
         shown ();
     }
@@ -332,6 +349,31 @@ public abstract class Window : NebulaShell.Object {
     }
 
     /**
+     * Set the root child widget for this window.
+     *
+     * The child widget is stored and rendered when the window
+     * is shown. Only one root child is allowed — calling set_child
+     * replaces the previous child.
+     *
+     * @param child the root widget to display in this window
+     */
+    public void set_child (Widget child) {
+        _child = child;
+        if (_renderer != null) {
+            _renderer.clear_cache ();
+        }
+    }
+
+    /**
+     * Get the root child widget of this window.
+     *
+     * @return the root widget, or null if no child is set
+     */
+    public Widget? get_child () {
+        return _child;
+    }
+
+    /**
      * Ensure the internal GtkWindow exists.
      *
      * Creates the window if it does not exist. Subclasses
@@ -346,9 +388,25 @@ public abstract class Window : NebulaShell.Object {
         _gtk_window.set_resizable (false);
 
         _gtk_window.close_request.connect (() => {
-            close ();
-            return true;
+            // Emit our close signal and let GTK handle the actual
+            // window destruction. Returning true and calling
+            // set_visible(false) inside the handler causes a
+            // use-after-free when GTK is already tearing down the window.
+            if (_visible) {
+                _visible = false;
+                closed ();
+            }
+            return false; // let GTK handle destruction
         });
+
+        // Render the child widget tree into GTK widgets
+        if (_child != null) {
+            if (_renderer == null) {
+                _renderer = new WidgetRenderer ();
+            }
+            var gtk_child = _renderer.render (_child);
+            _gtk_window.set_child (gtk_child);
+        }
     }
 
     /**
@@ -361,7 +419,12 @@ public abstract class Window : NebulaShell.Object {
     protected virtual void apply_layer_shell_config () {
         if (_gtk_window == null) return;
 
-        LayerShell.init_for_window (_gtk_window);
+        // Only initialize layer shell once per window
+        if (!_layer_shell_initialized) {
+            LayerShell.init_for_window (_gtk_window);
+            _layer_shell_initialized = true;
+        }
+
         LayerShell.set_layer (_gtk_window, _layer);
 
         LayerShell.set_anchor (_gtk_window, Anchor.TOP,

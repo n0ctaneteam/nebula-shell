@@ -33,8 +33,10 @@ class Container(Widget):
         Args:
             name: Optional human-readable identifier for this container.
         """
-        super().__init__(name)
         self._widget = _GIContainer()
+        self._name: Optional[str] = name
+        if name is not None:
+            self._widget.set_name(name)
 
     def append(self, child: Widget) -> None:
         """Append a child widget to the end.
@@ -96,6 +98,41 @@ class Container(Widget):
         return self.child_count
 
 
+_TYPE_MAP = None
+
+def _get_type_map():
+    global _TYPE_MAP
+    if _TYPE_MAP is not None:
+        return _TYPE_MAP
+    from nebula_shell.ui.label import Label
+    from nebula_shell.ui.button import Button
+    from nebula_shell.ui.box import Box
+    from nebula_shell.ui.overlay import Overlay
+    from nebula_shell.ui.stack import Stack
+    from nebula_shell.ui.grid import Grid
+    from nebula_shell.ui.separator import Separator
+    from nebula_shell.ui.spacer import Spacer
+    from nebula_shell.ui.icon import Icon
+    from nebula_shell.ui.image import Image
+    from nebula_shell.ui.entry import Entry
+    _TYPE_MAP = {
+        "NebulaShellLabel": Label,
+        "NebulaShellButton": Button,
+        "NebulaShellBox": Box,
+        "NebulaShellOverlay": Overlay,
+        "NebulaShellStack": Stack,
+        "NebulaShellGrid": Grid,
+        "NebulaShellSeparator": Separator,
+        "NebulaShellSpacer": Spacer,
+        "NebulaShellIcon": Icon,
+        "NebulaShellImage": Image,
+        "NebulaShellEntry": Entry,
+        "NebulaShellContainer": Container,
+        "NebulaShellWidget": Widget,
+    }
+    return _TYPE_MAP
+
+
 def _wrap_widget(gi_widget) -> Widget:
     """Wrap a GI widget object in the appropriate Python wrapper.
 
@@ -105,33 +142,9 @@ def _wrap_widget(gi_widget) -> Widget:
     Returns:
         The wrapped widget.
     """
-    from nebula_shell.ui.label import Label
-    from nebula_shell.ui.button import Button
-    from nebula_shell.ui.box import Box
-    from nebula_shell.ui.overlay import Overlay
-    from nebula_shell.ui.stack import Stack
-    from nebula_shell.ui.grid import Grid
-    from nebula_shell.ui.separator import Separator
-    from nebula_shell.ui.spacer import Spacer
-
     type_name = gi_widget.get_type().name
-
-    type_map = {
-        "NebulaShellLabel": Label,
-        "NebulaShellButton": Button,
-        "NebulaShellBox": Box,
-        "NebulaShellOverlay": Overlay,
-        "NebulaShellStack": Stack,
-        "NebulaShellGrid": Grid,
-        "NebulaShellSeparator": Separator,
-        "NebulaShellSpacer": Spacer,
-        "NebulaShellContainer": Container,
-        "NebulaShellWidget": Widget,
-    }
-
+    type_map = _get_type_map()
     wrapper_class = type_map.get(type_name, Widget)
     wrapper = wrapper_class.__new__(wrapper_class)
     wrapper._widget = gi_widget
-    wrapper._name = None
-    wrapper._signal_handlers = {}
     return wrapper

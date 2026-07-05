@@ -82,6 +82,7 @@ nebula_sources = files(
     'cli_inspect.vala',
     'cli_dev.vala',
     'cli_format.vala',
+    'cli_theme.vala',
     'cli_plugin.vala',
     'cli_version.vala',
     'dev_tools.vala',
@@ -149,6 +150,8 @@ gir = gnome.generate_gir(
     identifier_prefix: 'NebulaShell',
 
     symbol_prefix: 'nebula_shell',
+
+    dependencies: [glib_dep, gio_dep, gtk_dep],
 
     install: true,
 )

@@ -16,6 +16,7 @@ namespace NebulaShell {
  *   format    - Format configuration files
  *   plugin    - Manage plugins
  *   version   - Show version information
+ *   theme     - Select or manage themes
  *
  * Example:
  *   nebula-shell init
@@ -65,6 +66,8 @@ public class Cli : GLib.Object {
                 return execute_dev ();
             case "format":
                 return execute_format ();
+            case "theme":
+                return execute_theme ();
             case "plugin":
                 return execute_plugin ();
             case "version":
@@ -96,6 +99,7 @@ public class Cli : GLib.Object {
         print ("  doctor     Check system for common issues\n");
         print ("  inspect    Inspect running NebulaShell instances\n");
         print ("  dev        Start development mode with hot-reload\n");
+        print ("  theme      Select or manage themes\n");
         print ("  format     Format configuration files\n");
         print ("  plugin     Manage plugins\n");
         print ("  version    Show version information\n");
@@ -172,6 +176,16 @@ public class Cli : GLib.Object {
     private int execute_format () {
         var format_cmd = new CliFormat ();
         return format_cmd.run (get_command_args ());
+    }
+
+    /**
+     * Execute the theme command.
+     *
+     * @return 0 on success, non-zero on failure
+     */
+    private int execute_theme () {
+        var theme_cmd = new CliTheme ();
+        return theme_cmd.run (get_command_args ());
     }
 
     /**

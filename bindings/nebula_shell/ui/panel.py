@@ -15,7 +15,6 @@ Example:
 
 from typing import Optional
 
-from nebula_shell._gi import Panel as _GIPanel
 from nebula_shell.ui.window import Window, Anchor, Layer, KeyboardMode, Monitor
 
 
@@ -43,10 +42,10 @@ class Panel(Window):
             name: Optional human-readable identifier for this panel.
         """
         super().__init__(name)
-        self._gi_window = _GIPanel()
         self._anchor = Anchor.TOP
         self._layer = Layer.TOP
         self._exclusive = True
+        self.height = 32
         self._keyboard_mode = KeyboardMode.NONE
 
     @property

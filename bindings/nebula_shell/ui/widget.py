@@ -5,7 +5,7 @@ Widget provides the foundation for all visual components.
 Widgets display information but never fetch it.
 """
 
-from typing import Optional, Callable, Any
+from typing import Optional, Callable
 
 from nebula_shell._gi import Widget as _GIWidget
 
@@ -33,31 +33,35 @@ class Widget:
             name: Optional human-readable identifier for this widget.
         """
         self._widget = _GIWidget()
-        self._name = name
-        self._signal_handlers: dict[str, list[Callable]] = {}
+        if name is not None:
+            self._widget.set_name(name)
 
     @property
     def visible(self) -> bool:
         """Whether the widget is currently visible."""
-        return self._widget.get_property("visible")
+        return self._widget.get_visible()
 
     @visible.setter
     def visible(self, value: bool) -> None:
-        self._widget.set_property("visible", value)
+        self._widget.set_visible(value)
 
     @property
     def tooltip(self) -> str:
         """Tooltip text displayed on hover."""
-        return self._widget.get_property("tooltip") or ""
+        return self._widget.get_tooltip() or ""
 
     @tooltip.setter
     def tooltip(self, value: str) -> None:
-        self._widget.set_property("tooltip", value)
+        self._widget.set_tooltip(value)
 
     @property
     def name(self) -> Optional[str]:
         """Human-readable identifier for this widget."""
-        return self._name
+        return self._widget.get_name() or None
+
+    @name.setter
+    def name(self, value: Optional[str]) -> None:
+        self._widget.set_name(value or "")
 
     def show(self) -> None:
         """Show the widget."""

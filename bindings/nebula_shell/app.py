@@ -26,19 +26,13 @@ class Application:
         """Create a new Nebula Shell application."""
         self._app = _Application()
 
-    def run(self, args: Optional[list] = None) -> int:
+    def run(self) -> int:
         """Start the application event loop.
-
-        This initializes the runtime, loads configuration and plugins,
-        creates windows, and enters the main GTK event loop.
-
-        Args:
-            args: Optional command line arguments. If None, uses sys.argv.
 
         Returns:
             Exit code from the application.
         """
-        return self._app.run(args)
+        return self._app.run()
 
     def quit(self) -> None:
         """Quit the application immediately."""

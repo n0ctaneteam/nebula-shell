@@ -6,7 +6,7 @@ Image displays an image from a file or resource.
 
 from typing import Optional
 
-from nebula_shell._gi import Widget as _GIWidget
+from nebula_shell._gi import Image as _GIImage
 from nebula_shell.ui.widget import Widget
 
 
@@ -27,25 +27,26 @@ class Image(Widget):
             path: The file path or resource path of the image.
             name: Optional human-readable identifier.
         """
-        super().__init__(name)
-        self._widget = _GIWidget()
-        self._path = path
-        self._pixel_size = -1
+        super().__init__()
+        self._widget = _GIImage()
+        self._widget.set_path(path)
+        if name is not None:
+            self._widget.set_name(name)
 
     @property
     def path(self) -> str:
         """The path of the displayed image."""
-        return self._path
+        return self._widget.get_path()
 
     @path.setter
     def path(self, value: str) -> None:
-        self._path = value
+        self._widget.set_path(value)
 
     @property
     def pixel_size(self) -> int:
         """The size of the image in pixels. -1 means natural size."""
-        return self._pixel_size
+        return self._widget.get_pixel_size()
 
     @pixel_size.setter
     def pixel_size(self, value: int) -> None:
-        self._pixel_size = value
+        self._widget.set_pixel_size(value)

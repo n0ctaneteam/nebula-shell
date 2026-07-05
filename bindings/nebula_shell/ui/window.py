@@ -11,7 +11,7 @@ Window is abstract. Concrete subclasses are Panel, Popup, and Overlay.
 from enum import IntFlag, IntEnum
 from typing import Optional
 
-from nebula_shell._gi import Window as _GIWindow
+from nebula_shell._gi import Panel as _GIPanel
 from nebula_shell.ui.widget import Widget
 
 
@@ -254,8 +254,10 @@ class Window(Widget):
         Args:
             name: Optional human-readable identifier for this window.
         """
-        super().__init__(name)
-        self._gi_window = _GIWindow()
+        super().__init__()
+        self._widget = _GIPanel()
+        if name is not None:
+            self._widget.set_name(name)
         self._visible = False
         self._width = 800
         self._height = 600
@@ -269,6 +271,7 @@ class Window(Widget):
         self._margin_left = 0
         self._margin_right = 0
         self._children: list = []
+        self._title = ""
 
     @property
     def visible(self) -> bool:
@@ -285,8 +288,7 @@ class Window(Widget):
         if value <= 0:
             return
         self._width = value
-        if self._visible:
-            self._gi_window.set_default_size(self._width, self._height)
+        self._widget.set_width(value)
 
     @property
     def height(self) -> int:
@@ -298,8 +300,7 @@ class Window(Widget):
         if value <= 0:
             return
         self._height = value
-        if self._visible:
-            self._gi_window.set_default_size(self._width, self._height)
+        self._widget.set_height(value)
 
     @property
     def monitor(self) -> Optional[Monitor]:
@@ -318,6 +319,7 @@ class Window(Widget):
     @anchor.setter
     def anchor(self, value: Anchor) -> None:
         self._anchor = value
+        self._widget.set_anchor(int(value))
 
     @property
     def layer(self) -> Layer:
@@ -327,6 +329,7 @@ class Window(Widget):
     @layer.setter
     def layer(self, value: Layer) -> None:
         self._layer = value
+        self._widget.set_layer(int(value))
 
     @property
     def exclusive(self) -> bool:
@@ -336,6 +339,7 @@ class Window(Widget):
     @exclusive.setter
     def exclusive(self, value: bool) -> None:
         self._exclusive = value
+        self._widget.set_exclusive(value)
 
     @property
     def keyboard_mode(self) -> KeyboardMode:
@@ -345,6 +349,7 @@ class Window(Widget):
     @keyboard_mode.setter
     def keyboard_mode(self, value: KeyboardMode) -> None:
         self._keyboard_mode = value
+        self._widget.set_keyboard_mode(int(value))
 
     @property
     def margin_top(self) -> int:
@@ -354,6 +359,7 @@ class Window(Widget):
     @margin_top.setter
     def margin_top(self, value: int) -> None:
         self._margin_top = value
+        self._widget.set_margin_top(value)
 
     @property
     def margin_bottom(self) -> int:
@@ -363,6 +369,7 @@ class Window(Widget):
     @margin_bottom.setter
     def margin_bottom(self, value: int) -> None:
         self._margin_bottom = value
+        self._widget.set_margin_bottom(value)
 
     @property
     def margin_left(self) -> int:
@@ -372,6 +379,7 @@ class Window(Widget):
     @margin_left.setter
     def margin_left(self, value: int) -> None:
         self._margin_left = value
+        self._widget.set_margin_left(value)
 
     @property
     def margin_right(self) -> int:
@@ -381,6 +389,21 @@ class Window(Widget):
     @margin_right.setter
     def margin_right(self, value: int) -> None:
         self._margin_right = value
+        self._widget.set_margin_right(value)
+
+    @property
+    def title(self) -> str:
+        return self._title or ""
+
+    @title.setter
+    def title(self, value: str) -> None:
+        self._title = value
+
+    def add(self, child: 'Widget') -> None:
+        """Add a child widget to this window."""
+        if not hasattr(self, '_children'):
+            self._children = []
+        self._children.append(child)
 
     def show(self) -> None:
         """Show the window on screen.
@@ -390,6 +413,7 @@ class Window(Widget):
         if self._visible:
             return
         self._visible = True
+        self._widget.show()
 
     def hide(self) -> None:
         """Hide the window without destroying it.
@@ -399,6 +423,7 @@ class Window(Widget):
         if not self._visible:
             return
         self._visible = False
+        self._widget.hide()
 
     def toggle(self) -> None:
         """Toggle the window visibility.
@@ -426,13 +451,11 @@ class Window(Widget):
 
         After destruction, the window cannot be shown again.
         """
-        self._gi_window = None
         self._visible = False
+        self._widget.destroy()
 
     def set_size(self, width: int, height: int) -> None:
         """Set the window size.
-
-        Convenience method to set both width and height at once.
 
         Args:
             width: The new width in logical pixels.
@@ -442,4 +465,4 @@ class Window(Widget):
             return
         self._width = width
         self._height = height
-        self._gi_window.set_default_size(self._width, self._height)
+        self._widget.set_size(width, height)

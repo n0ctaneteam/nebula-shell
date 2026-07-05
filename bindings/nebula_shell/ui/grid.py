@@ -7,6 +7,7 @@ Grid arranges children in a two-dimensional grid.
 from enum import Enum
 from typing import Optional
 
+from nebula_shell._gi import Grid as _GIGrid
 from nebula_shell.ui.container import Container
 
 
@@ -37,67 +38,64 @@ class Grid(Container):
         Args:
             name: Optional human-readable identifier.
         """
-        super().__init__(name)
-        self._rows = 1
-        self._columns = 1
-        self._row_spacing = 0
-        self._column_spacing = 0
-        self._row_alignment = GridAlignment.START
-        self._column_alignment = GridAlignment.START
+        super().__init__()
+        self._widget = _GIGrid()
+        if name is not None:
+            self._widget.set_name(name)
 
     @property
     def rows(self) -> int:
         """Number of rows in the grid."""
-        return self._rows
+        return self._widget.get_rows()
 
     @rows.setter
     def rows(self, value: int) -> None:
-        self._rows = value
+        self._widget.set_rows(value)
 
     @property
     def columns(self) -> int:
         """Number of columns in the grid."""
-        return self._columns
+        return self._widget.get_columns()
 
     @columns.setter
     def columns(self, value: int) -> None:
-        self._columns = value
+        self._widget.set_columns(value)
 
     @property
     def row_spacing(self) -> int:
         """Spacing between rows in logical pixels."""
-        return self._row_spacing
+        return self._widget.get_row_spacing()
 
     @row_spacing.setter
     def row_spacing(self, value: int) -> None:
-        self._row_spacing = value
+        self._widget.set_row_spacing(value)
 
     @property
     def column_spacing(self) -> int:
         """Spacing between columns in logical pixels."""
-        return self._column_spacing
+        return self._widget.get_column_spacing()
 
     @column_spacing.setter
     def column_spacing(self, value: int) -> None:
-        self._column_spacing = value
+        self._widget.set_column_spacing(value)
 
     @property
     def row_alignment(self) -> GridAlignment:
         """Vertical alignment of children within their cells."""
-        return self._row_alignment
+        return GridAlignment(self._widget.get_row_alignment())
 
     @row_alignment.setter
     def row_alignment(self, value: GridAlignment) -> None:
-        self._row_alignment = value
+        self._widget.set_row_alignment(value.value)
 
     @property
     def column_alignment(self) -> GridAlignment:
         """Horizontal alignment of children within their cells."""
-        return self._column_alignment
+        return GridAlignment(self._widget.get_column_alignment())
 
     @column_alignment.setter
     def column_alignment(self, value: GridAlignment) -> None:
-        self._column_alignment = value
+        self._widget.set_column_alignment(value.value)
 
     def attach(self, child, column: int, row: int) -> None:
         """Attach a child widget to a specific cell.
@@ -109,4 +107,4 @@ class Grid(Container):
             column: The column index (0-based).
             row: The row index (0-based).
         """
-        self.append(child)
+        self._widget.attach(child._widget, column, row)

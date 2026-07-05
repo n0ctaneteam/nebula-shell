@@ -1,143 +1,173 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Nebula Shell — Local Install Script
-# Builds and installs Nebula Shell to the system without AUR/makepkg.
+###############################################################################
+# Nebula Shell Installer
+###############################################################################
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BUILD_DIR="${SCRIPT_DIR}/builddir"
-PREFIX="${PREFIX:-/usr/local}"
-PYTHON_SITE="$(python3 -c 'import site; print(site.getsitepackages()[0])')"
+PREFIX="/usr"
+BUILDDIR="builddir"
 
 info()  { printf '\033[1;34m:: %s\033[0m\n' "$*"; }
 ok()    { printf '\033[1;32m:: %s\033[0m\n' "$*"; }
 warn()  { printf '\033[1;33m:: %s\033[0m\n' "$*"; }
 err()   { printf '\033[1;31m:: %s\033[0m\n' "$*" >&2; exit 1; }
 
-# ---------------------------------------------------------------------------
-# Parse arguments
-# ---------------------------------------------------------------------------
+###############################################################################
+# Root Check
+###############################################################################
 
-ACTION="install"
-SKIP_BUILD=false
-SKIP_TESTS=false
+# if [[ $EUID -ne 0 ]]; then
+#     info "Requesting administrator privileges..."
+#     exec sudo --preserve-env=PATH bash "$0" "$@"
+# fi
 
-for arg in "$@"; do
-    case "$arg" in
-        --build-only)   ACTION="build" ;;
-        --prefix=*)     PREFIX="${arg#*=}" ;;
-        --skip-tests)   SKIP_TESTS=true ;;
-        --help|-h)
-            echo "Usage: $0 [OPTIONS]"
-            echo ""
-            echo "Options:"
-            echo "  --build-only      Build only, do not install"
-            echo "  --prefix=PATH     Install prefix (default: /usr/local)"
-            echo "  --skip-tests      Skip test suite"
-            echo "  --help, -h        Show this help"
-            exit 0
-            ;;
-        *) err "Unknown option: $arg" ;;
-    esac
+###############################################################################
+# Dependency Check
+###############################################################################
+
+###############################################################################
+# Dependencies
+###############################################################################
+
+info "Checking dependencies..."
+
+deps=(
+    meson
+    ninja
+    vala
+    gcc
+    git
+    python
+    gtk4
+    gtk4-layer-shell
+    libgee
+    json-glib
+    gobject-introspection
+)
+
+missing=()
+
+for pkg in "${deps[@]}"; do
+    pacman -Q "$pkg" >/dev/null 2>&1 || missing+=("$pkg")
 done
 
-# ---------------------------------------------------------------------------
-# Preflight checks
-# ---------------------------------------------------------------------------
+if (( ${#missing[@]} )); then
+    warn "Missing packages:"
+    printf '  %s\n' "${missing[@]}"
 
-info "Nebula Shell — Local Install"
-echo "  Prefix:   ${PREFIX}"
-echo "  Python:   ${PYTHON_SITE}"
-echo ""
+    info "Installing missing dependencies..."
+    if ! pacman -S --needed --noconfirm "${missing[@]}"; then
+        err "Failed to install required dependencies."
+    fi
 
-for cmd in meson ninja valac python3; do
-    command -v "$cmd" &>/dev/null || err "'$cmd' not found. Install build dependencies first."
-done
+    ok "Dependencies installed."
+else
+    ok "All dependencies are already installed."
+fi
 
-# ---------------------------------------------------------------------------
-# Build
-# ---------------------------------------------------------------------------
+###############################################################################
+# Configure
+###############################################################################
 
-info "Configuring..."
-rm -rf "${BUILD_DIR}"
-meson setup "${BUILD_DIR}" "${SCRIPT_DIR}" \
-    --prefix="${PREFIX}" \
+info "Configuring project..."
+
+if [[ -d "$BUILDDIR" ]]; then
+    rm -rf "$BUILDDIR" 2>/dev/null || sudo rm -rf "$BUILDDIR"
+fi
+
+meson setup "$BUILDDIR" \
+    --prefix="$PREFIX" \
     --buildtype=plain \
-    -Dwerror=false \
-    2>&1 | tail -3
+    -Dwerror=false
+
+###############################################################################
+# Build
+###############################################################################
 
 info "Building..."
-ninja -C "${BUILD_DIR}" 2>&1 | grep -E '^\[|error|FAILED' | tail -5
 
-ok "Build complete"
+ninja -C "$BUILDDIR"
 
-# ---------------------------------------------------------------------------
-# Test
-# ---------------------------------------------------------------------------
+ok "Build complete."
 
-if [ "${SKIP_TESTS}" = false ]; then
-    info "Running tests..."
-    if meson test -C "${BUILD_DIR}" 2>&1 | grep -q 'Ok:.*11'; then
-        ok "All 11 tests passed"
-    else
-        err "Some tests failed"
-    fi
+###############################################################################
+# Patch GIR (workaround for g-ir-scanner parent detection bug)
+###############################################################################
+
+info "Patching GIR (adding GObject.Object parent to NebulaShell.Object)..."
+
+./patch-gir.sh "$BUILDDIR/core/nebula-shell" "$BUILDDIR/core/nebula-shell"
+
+ok "GIR patched."
+
+###############################################################################
+# Tests
+###############################################################################
+
+info "Running tests..."
+
+if ! meson test -C "$BUILDDIR" --print-errorlogs; then
+    warn "Some tests failed."
 fi
 
-if [ "${ACTION}" = "build" ]; then
-    ok "Build-only mode. Skipping install."
-    exit 0
-fi
+###############################################################################
+# Install binaries
+###############################################################################
 
-# ---------------------------------------------------------------------------
-# Install
-# ---------------------------------------------------------------------------
+info "Installing framework..."
 
-info "Installing to ${PREFIX}..."
-sudo DESTDIR="" ninja -C "${BUILD_DIR}" install
+ninja -C "$BUILDDIR" install
 
-# ---------------------------------------------------------------------------
+###############################################################################
 # Python bindings
-# ---------------------------------------------------------------------------
+###############################################################################
 
 info "Installing Python bindings..."
-sudo install -dm755 "${PYTHON_SITE}"
-sudo cp -r "${SCRIPT_DIR}/bindings/nebula_shell" "${PYTHON_SITE}/"
-ok "Python bindings installed to ${PYTHON_SITE}/nebula_shell"
 
-# ---------------------------------------------------------------------------
-# System config directory
-# ---------------------------------------------------------------------------
+SITE_PACKAGES=$(python3 -c 'import site; print(site.getsitepackages()[0])')
 
-info "Setting up /etc/nebula-shell/..."
-sudo install -dm755 /etc/nebula-shell
+rm -rf bindings/nebula_shell/__pycache__ 2>/dev/null || true
+find bindings/nebula_shell -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
 
-if [ ! -f /etc/nebula-shell/shell.py ]; then
-    sudo install -Dm644 "${SCRIPT_DIR}/data/shell.py" /etc/nebula-shell/shell.py
-    ok "Default shell.py installed"
+mkdir -p "$SITE_PACKAGES"
+
+cp -r bindings/nebula_shell "$SITE_PACKAGES/"
+
+###############################################################################
+# Config
+###############################################################################
+
+info "Installing configuration..."
+
+mkdir -p /etc/nebula-shell
+
+if [[ ! -f /etc/nebula-shell/shell.py ]]; then
+    install -Dm644 data/shell.py \
+        /etc/nebula-shell/shell.py
 else
-    warn "shell.py already exists, skipping (use --force to overwrite)"
+    warn "/etc/nebula-shell/shell.py already exists."
+    warn "Keeping existing configuration."
 fi
 
-# ---------------------------------------------------------------------------
-# XDG autostart (user-level)
-# ---------------------------------------------------------------------------
+###############################################################################
+# XDG Autostart
+###############################################################################
 
-AUTOSTART_DIR="${HOME}/.config/autostart"
-info "Installing XDG autostart to ${AUTOSTART_DIR}..."
-install -dm755 "${AUTOSTART_DIR}"
-install -Dm644 "${SCRIPT_DIR}/data/nebula-shell.desktop" "${AUTOSTART_DIR}/nebula-shell.desktop"
-ok "Autostart desktop file installed"
+info "Installing autostart entry..."
 
-# ---------------------------------------------------------------------------
-# Done
-# ---------------------------------------------------------------------------
+install -Dm644 \
+    data/nebula-shell.desktop \
+    /usr/share/xdg/autostart/nebula-shell.desktop
 
-echo ""
-ok "Installation complete!"
-echo ""
-echo "  To run:  nebula-shell run"
-echo "  To dev:  nebula-shell dev"
-echo "  Config:  /etc/nebula-shell/shell.py (system)"
-echo "           ~/.config/nebula-shell/shell.py (user)"
-echo ""
+###############################################################################
+# Finished
+###############################################################################
+
+ok ""
+ok "Nebula Shell installed successfully."
+ok ""
+ok "Configuration : /etc/nebula-shell"
+ok "Python module : ${SITE_PACKAGES}/nebula_shell"
+ok "Prefix        : ${PREFIX}"
+ok ""

@@ -8,6 +8,8 @@ Children are layered in order: later children appear on top.
 from enum import Enum
 from typing import Optional
 
+from nebula_shell._gi import Overlay as _GIOverlay
+from nebula_shell._gi import OverlayAlignment as _GIOverlayAlignment
 from nebula_shell.ui.container import Container
 
 
@@ -39,15 +41,19 @@ class Overlay(Container):
         overlay.append(content)
     """
 
-    def __init__(self, name: Optional[str] = None) -> None:
+    def __init__(self, name: Optional[str] = None, default_alignment: OverlayAlignment = OverlayAlignment.CENTER) -> None:
         """Create a new overlay.
 
         Args:
             name: Optional human-readable identifier.
+            default_alignment: Default alignment for children.
         """
-        super().__init__(name)
-        self._default_alignment = OverlayAlignment.CENTER
+        super().__init__()
+        self._widget = _GIOverlay()
+        self._default_alignment = default_alignment
         self._child_alignments: dict[int, OverlayAlignment] = {}
+        if name is not None:
+            self._widget.set_name(name)
 
     @property
     def default_alignment(self) -> OverlayAlignment:
@@ -57,6 +63,7 @@ class Overlay(Container):
     @default_alignment.setter
     def default_alignment(self, value: OverlayAlignment) -> None:
         self._default_alignment = value
+        self._widget.set_default_alignment(value.value)
 
     def set_child_alignment(self, child, alignment: OverlayAlignment) -> None:
         """Set the alignment for a specific child.
@@ -65,8 +72,7 @@ class Overlay(Container):
             child: The widget to align.
             alignment: The alignment position.
         """
-        child_id = id(child)
-        self._child_alignments[child_id] = alignment
+        self._widget.set_child_alignment(child._widget, alignment.value)
 
     def get_child_alignment(self, child) -> OverlayAlignment:
         """Get the alignment for a specific child.
@@ -77,5 +83,4 @@ class Overlay(Container):
         Returns:
             The alignment, or the default alignment.
         """
-        child_id = id(child)
-        return self._child_alignments.get(child_id, self._default_alignment)
+        return OverlayAlignment(self._widget.get_child_alignment(child._widget))

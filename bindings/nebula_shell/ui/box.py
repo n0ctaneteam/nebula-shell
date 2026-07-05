@@ -59,9 +59,14 @@ class Box(Container):
             orientation: The layout direction. Default is HORIZONTAL.
             name: Optional human-readable identifier.
         """
-        super().__init__(name)
-        gi_orientation = _GIOrientation.HORIZONTAL if orientation == Orientation.HORIZONTAL else _GIOrientation.VERTICAL
-        self._widget = _GIBox(orientation=gi_orientation)
+        super().__init__()
+        self._widget = _GIBox()
+        self._widget.set_orientation(
+            _GIOrientation.HORIZONTAL if orientation == Orientation.HORIZONTAL
+            else _GIOrientation.VERTICAL
+        )
+        if name is not None:
+            self._widget.set_name(name)
         self._orientation = orientation
 
     @property

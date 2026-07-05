@@ -5,9 +5,7 @@ public class Application : NebulaShell.Object {
     private Gtk.Application _gtk_app;
     private Runtime runtime;
 
-    public Application () {
-
-        base.with_name ("application");
+    construct {
 
         _gtk_app = new Gtk.Application (
 

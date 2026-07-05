@@ -25,6 +25,7 @@ from nebula_shell.animation.animation import Animation
 from nebula_shell.animation.fade import FadeAnimation
 from nebula_shell.animation.slide import SlideAnimation
 from nebula_shell.animation.scale import ScaleAnimation
+from nebula_shell.theme import Theme
 
 __all__ = [
     "__version__",
@@ -43,6 +44,7 @@ __all__ = [
     "FadeAnimation",
     "SlideAnimation",
     "ScaleAnimation",
+    "Theme",
 ]
 
 __version__ = __version__

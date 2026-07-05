@@ -5,7 +5,7 @@ Button renders a clickable element that can contain a child widget.
 It emits a signal when pressed, enabling user interaction.
 """
 
-from typing import Optional, Callable
+from typing import Optional
 
 from nebula_shell._gi import Button as _GIButton
 from nebula_shell.ui.widget import Widget
@@ -31,40 +31,31 @@ class Button(Widget):
             label: Optional text label for the button.
             name: Optional human-readable identifier.
         """
-        super().__init__(name)
-        self._widget = _GIButton(label=label)
+        super().__init__()
+        self._widget = _GIButton()
+        self._widget.set_label_text(label)
+        if name is not None:
+            self._widget.set_name(name)
         self._label_text = label
 
     @property
     def label_text(self) -> str:
         """Convenience text label for the button."""
-        return self._widget.get_label()
+        return self._widget.get_label_text()
 
     @label_text.setter
     def label_text(self, value: str) -> None:
         self._label_text = value
-        self._widget.set_label(value)
+        self._widget.set_label_text(value)
 
     @property
     def enabled(self) -> bool:
         """Whether the button is enabled and can be clicked."""
-        return self._widget.get_sensitive()
+        return self._widget.get_enabled()
 
     @enabled.setter
     def enabled(self, value: bool) -> None:
-        self._widget.set_sensitive(value)
-
-    def connect(self, signal: str, callback: Callable) -> int:
-        """Connect a signal handler.
-
-        Args:
-            signal: The signal name (e.g., "clicked").
-            callback: The function to call when the signal is emitted.
-
-        Returns:
-            The handler ID.
-        """
-        return self._widget.connect(signal, callback)
+        self._widget.set_enabled(value)
 
     def press(self) -> None:
         """Emit the clicked signal.

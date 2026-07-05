@@ -49,6 +49,9 @@ try:
     Grid = NebulaShell.Grid
     Separator = NebulaShell.Separator
     Spacer = NebulaShell.Spacer
+    Entry = NebulaShell.Entry
+    Icon = NebulaShell.Icon
+    Image = NebulaShell.Image
 
     Service = NebulaShell.Service
     Animation = NebulaShell.Animation
@@ -66,6 +69,9 @@ try:
     KeyboardMode = NebulaShell.KeyboardMode
     Orientation = NebulaShell.Orientation
     Alignment = NebulaShell.Alignment
+    OverlayAlignment = NebulaShell.OverlayAlignment
+    GridAlignment = NebulaShell.GridAlignment
+    SlideDirection = NebulaShell.SlideDirection
 
 except (ImportError, ValueError):
     class _Stub:
@@ -87,6 +93,9 @@ except (ImportError, ValueError):
     Overlay = _Stub
     Stack = _Stub
     Grid = _Stub
+    Entry = _Stub
+    Icon = _Stub
+    Image = _Stub
     Separator = _Stub
     Spacer = _Stub
 
@@ -129,3 +138,26 @@ except (ImportError, ValueError):
         CENTER = 1
         END = 2
         FILL = 3
+
+    class OverlayAlignment:
+        TOP_LEFT = 0
+        TOP_CENTER = 1
+        TOP_RIGHT = 2
+        MIDDLE_LEFT = 3
+        CENTER = 4
+        MIDDLE_RIGHT = 5
+        BOTTOM_LEFT = 6
+        BOTTOM_CENTER = 7
+        BOTTOM_RIGHT = 8
+
+    class GridAlignment:
+        START = 0
+        CENTER = 1
+        END = 2
+        FILL = 3
+
+    class SlideDirection:
+        LEFT = 0
+        RIGHT = 1
+        UP = 2
+        DOWN = 3

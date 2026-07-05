@@ -6,6 +6,7 @@ Spacer adds empty space between widgets.
 
 from typing import Optional
 
+from nebula_shell._gi import Spacer as _GISpacer
 from nebula_shell.ui.widget import Widget
 
 
@@ -22,7 +23,7 @@ class Spacer(Widget):
         box.append(Label("Right"))
     """
 
-    def __init__(self, name: Optional[str] = None, min_size: int = 0, expand: bool = True) -> None:
+    def __init__(self, name: Optional[str] = None, min_size: int = 0, expand: bool = False) -> None:
         """Create a new spacer.
 
         Args:
@@ -30,24 +31,28 @@ class Spacer(Widget):
             min_size: The minimum size in logical pixels.
             expand: Whether to expand to fill available space.
         """
-        super().__init__(name)
-        self._min_size = min_size
-        self._expand = expand
+        super().__init__()
+        self._widget = _GISpacer()
+        if name is not None:
+            self._widget.set_name(name)
+        if min_size != 0 or expand:
+            self._widget.set_min_size(min_size)
+            self._widget.set_expand(expand)
 
     @property
     def min_size(self) -> int:
         """The minimum size in logical pixels."""
-        return self._min_size
+        return self._widget.get_min_size()
 
     @min_size.setter
     def min_size(self, value: int) -> None:
-        self._min_size = value
+        self._widget.set_min_size(value)
 
     @property
     def expand(self) -> bool:
         """Whether this spacer expands to fill available space."""
-        return self._expand
+        return self._widget.get_expand()
 
     @expand.setter
     def expand(self, value: bool) -> None:
-        self._expand = value
+        self._widget.set_expand(value)

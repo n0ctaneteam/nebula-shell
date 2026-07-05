@@ -6,6 +6,7 @@ Stack shows one child at a time, switching between them.
 
 from typing import Optional
 
+from nebula_shell._gi import Stack as _GIStack
 from nebula_shell.ui.container import Container
 
 
@@ -29,55 +30,48 @@ class Stack(Container):
         Args:
             name: Optional human-readable identifier.
         """
-        super().__init__(name)
-        self._visible_child_index = 0
-        self._visible_child_name = ""
-        self._animate_transitions = True
+        super().__init__()
+        self._widget = _GIStack()
+        if name is not None:
+            self._widget.set_name(name)
 
     @property
     def visible_child_index(self) -> int:
         """Index of the currently visible child."""
-        return self._visible_child_index
+        return self._widget.get_visible_child_index()
 
     @visible_child_index.setter
     def visible_child_index(self, value: int) -> None:
-        if value < 0 or value >= self.child_count:
-            return
-        if self._visible_child_index == value:
-            return
-        self._visible_child_index = value
+        self._widget.set_visible_child_index(value)
 
     @property
     def visible_child_name(self) -> str:
         """Name of the currently visible child."""
-        return self._visible_child_name
+        return self._widget.get_visible_child_name()
 
     @visible_child_name.setter
     def visible_child_name(self, value: str) -> None:
-        self._visible_child_name = value
-        for i, child in enumerate(self):
-            if child.name == value:
-                self.visible_child_index = i
-                return
+        self._widget.set_visible_child_name(value)
 
     @property
     def animate_transitions(self) -> bool:
         """Whether transitions between children are animated."""
-        return self._animate_transitions
+        return self._widget.get_animate_transitions()
 
     @animate_transitions.setter
     def animate_transitions(self, value: bool) -> None:
-        self._animate_transitions = value
+        self._widget.set_animate_transitions(value)
 
-    def get_visible_child(self):
+    def get_visible_child(self) -> Optional['Widget']:
         """Get the currently visible child widget.
 
         Returns:
             The visible child, or None if empty.
         """
-        if self._visible_child_index < self.child_count:
-            children = list(self)
-            return children[self._visible_child_index]
+        from nebula_shell.ui.container import _wrap_widget
+        child = self._widget.get_visible_child()
+        if child is not None:
+            return _wrap_widget(child)
         return None
 
     def set_visible_child(self, child) -> None:
@@ -86,10 +80,7 @@ class Stack(Container):
         Args:
             child: The widget to make visible.
         """
-        for i, c in enumerate(self):
-            if c is child:
-                self.visible_child_index = i
-                return
+        self._widget.set_visible_child(child._widget)
 
     def add_named(self, name: str, child) -> None:
         """Add a named child to the stack.
@@ -101,5 +92,5 @@ class Stack(Container):
             name: The name to assign to the child.
             child: The widget to add.
         """
-        child._name = name
-        self.append(child)
+        self._widget.add_named(name, child._widget)
+        child.name = name

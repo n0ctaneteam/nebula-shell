@@ -167,4 +167,5 @@ meson.add_install_script(
     gir_file,
     get_option('datadir'),
     get_option('libdir'),
+    get_option('prefix'),
 )

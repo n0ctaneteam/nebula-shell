@@ -1,0 +1,22 @@
+/* ── Clock widget theme ── */
+#clock-widget {
+    background: transparent;
+}
+
+#clock-time {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 64px;
+    font-weight: bold;
+    color: #ff2d95;
+    text-shadow: 0 0 16px #ff2d9588, 0 0 40px rgba(255, 45, 149, 0.2);
+    letter-spacing: 4px;
+}
+
+#clock-date {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 14px;
+    color: #00e5ff;
+    text-shadow: 0 0 8px #00e5ff88;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}

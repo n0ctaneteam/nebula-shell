@@ -1,297 +1,262 @@
-/* =========================================================================
-   Nebula Shell — Default Theme (n0ctos)
-   ========================================================================= */
+/* ═══════════════════════════════════════════════════
+   Nebula Shell — Synthwave Neon Theme
+   ═══════════════════════════════════════════════════ */
 
-/* --- Global Reset --- */
-* {
-    font-family: "Sans", "Segoe UI", "Noto Sans", "Cantarell";
-    font-size: 14px;
-    color: #cdd6f4;
+/* ── Palette ── */
+:root {
+    --bg-dark:     #0a0a1a;
+    --bg-panel:    #12122a;
+    --bg-card:     #1a1a3e;
+    --pink:        #ff2d95;
+    --pink-glow:   #ff2d9588;
+    --cyan:        #00e5ff;
+    --cyan-glow:   #00e5ff88;
+    --purple:      #b400ff;
+    --purple-glow: #b400ff66;
+    --text:        #e0e0ff;
+    --text-dim:    #8888aa;
+    --border:      #2a2a5e;
 }
 
-/* =========================================================================
-   PANELS
-   ========================================================================= */
-
-/* --- Top Panel --- */
-#top-panel {
-    background-color: rgba(17, 17, 27, 0.95);
-    padding: 0 12px;
-    min-height: 36px;
-    border-bottom: 1px solid rgba(205, 214, 244, 0.06);
+/* ── Base ── */
+#top-bar {
+    background: linear-gradient(180deg, var(--bg-dark) 0%, var(--bg-panel) 100%);
+    border-bottom: 1px solid var(--pink);
+    box-shadow: 0 0 12px var(--pink-glow), inset 0 0 60px rgba(255, 45, 149, 0.03);
 }
 
-#top-panel .status-label {
-    color: #a6adc8;
-    font-size: 13px;
+/* ── Left section ── */
+.bar-left {
+    padding: 0 8px;
 }
 
-#top-panel .status-label.active {
-    color: #a6e3a1;
-}
-
-#clock {
-    color: #cdd6f4;
-    font-weight: bold;
-    font-size: 13px;
-    letter-spacing: 0.5px;
-}
-
-/* --- Bottom Panel --- */
-#bottom-panel {
-    background-color: rgba(17, 17, 27, 0.95);
-    padding: 0 12px;
-    min-height: 28px;
-    border-top: 1px solid rgba(205, 214, 244, 0.06);
-}
-
-#bottom-panel .status-label {
-    color: #6c7086;
+.workspace-btn {
+    min-width: 28px;
+    min-height: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text-dim);
+    font-family: "JetBrains Mono", "Fira Code", monospace;
     font-size: 11px;
-}
-
-.workspace {
-    color: #585b70;
-    font-size: 12px;
     font-weight: bold;
-    padding: 2px 8px;
-    border-radius: 4px;
-    min-width: 20px;
+    transition: all 0.15s ease;
 }
 
-.workspace.active {
-    color: #cdd6f4;
-    background-color: rgba(137, 180, 250, 0.2);
+.workspace-btn:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan-glow);
 }
 
-.workspace:hover {
-    background-color: rgba(137, 180, 250, 0.1);
+.workspace-btn.active {
+    background: var(--purple);
+    border-color: var(--pink);
+    color: #fff;
+    box-shadow: 0 0 10px var(--pink-glow), inset 0 0 10px rgba(255, 255, 255, 0.05);
 }
 
-/* --- Quit Button (top bar) --- */
-.quit-btn {
+/* ── Center clock ── */
+.bar-center {
+    padding: 0 16px;
+}
+
+.clock-text {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow), 0 0 20px rgba(0, 229, 255, 0.3);
+    letter-spacing: 2px;
+}
+
+.date-text {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* ── Right tray ── */
+.bar-right {
+    padding: 0 8px;
+}
+
+.tray-icon {
+    color: var(--text);
+    opacity: 0.85;
+    transition: all 0.15s ease;
+}
+
+.tray-icon:hover {
+    color: var(--pink);
+    opacity: 1;
+    text-shadow: 0 0 8px var(--pink-glow);
+}
+
+#volume:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
+#wifi:hover   { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
+#battery:hover{ color: #00ff88;     text-shadow: 0 0 8px #00ff8866; }
+
+/* ── Separators ── */
+.bar-separator {
+    background: linear-gradient(180deg, transparent 0%, var(--pink) 50%, transparent 100%);
+    min-width: 1px;
+    opacity: 0.4;
+    margin: 4px 0;
+}
+
+/* ── Scan line overlay ── */
+#top-bar::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 1px,
+        rgba(255, 255, 255, 0.008) 1px,
+        rgba(255, 255, 255, 0.008) 2px
+    );
+    pointer-events: none;
+}
+
+/* ── Corner accents ── */
+#top-bar::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 40px;
+    height: 1px;
+    background: linear-gradient(90deg, var(--pink), transparent);
+    box-shadow: 0 0 6px var(--pink-glow);
+}
+
+/* ── Clock Widget (desktop example) ── */
+#clock-widget {
     background: transparent;
-    color: #f38ba8;
-    border: none;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 14px;
 }
 
-.quit-btn:hover {
-    background-color: rgba(243, 139, 168, 0.15);
-}
-
-/* =========================================================================
-   SHOWCASE LAYOUT
-   ========================================================================= */
-
-#showcase {
-    padding: 16px 20px;
-}
-
-#showcase-title {
-    color: #cdd6f4;
-    font-size: 20px;
+#clock-time {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 64px;
     font-weight: bold;
+    color: var(--pink);
+    text-shadow: 0 0 16px var(--pink-glow), 0 0 40px rgba(255, 45, 149, 0.2);
+    letter-spacing: 4px;
 }
 
-#showcase-subtitle {
-    color: #6c7086;
-    font-size: 13px;
+#clock-date {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 14px;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+    letter-spacing: 2px;
+    text-transform: uppercase;
 }
 
-/* --- Widget Grid --- */
-#widget-grid {
+/* ── Launcher ── */
+#launcher {
+    background: rgba(10, 10, 26, 0.95);
+    border: 1px solid var(--purple);
+    border-radius: 8px;
+    box-shadow: 0 0 24px var(--purple-glow);
+}
+
+.launcher-tabs .tab-button {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-dim);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    padding: 4px 12px;
+    transition: all 0.15s;
+}
+
+.launcher-tabs .tab-button:hover {
+    color: var(--cyan);
+    border-bottom-color: var(--cyan);
+}
+
+.search-entry {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: "JetBrains Mono", monospace;
+    padding: 4px 8px;
     margin: 8px 0;
 }
 
-/* =========================================================================
-   WIDGET CARDS
-   ========================================================================= */
-
-.widget-card {
-    background-color: rgba(30, 30, 46, 0.8);
-    border: 1px solid rgba(205, 214, 244, 0.06);
-    border-radius: 10px;
-    padding: 14px;
-    min-width: 200px;
+.search-entry:focus {
+    border-color: var(--pink);
+    box-shadow: 0 0 8px var(--pink-glow);
 }
 
-.widget-card .card-title {
-    color: #89b4fa;
-    font-size: 14px;
-    font-weight: bold;
-    margin-bottom: 8px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid rgba(205, 214, 244, 0.06);
-}
-
-.widget-card .card-body {
-    color: #a6adc8;
-    font-size: 13px;
-}
-
-.widget-card .bold {
-    font-weight: bold;
-}
-
-.widget-card .small {
-    font-size: 11px;
-    color: #6c7086;
-}
-
-.widget-card .accent {
-    color: #89b4fa;
-}
-
-.widget-card .dim {
-    color: #585b70;
-}
-
-.widget-card .wrapped {
-    /* Note: use max-width with label widget */
-}
-
-/* =========================================================================
-   BUTTONS
-   ========================================================================= */
-
-.btn {
-    background-color: rgba(205, 214, 244, 0.06);
-    color: #cdd6f4;
-    border: 1px solid rgba(205, 214, 244, 0.1);
+.app-grid .app-cell {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 6px 14px;
-    font-size: 13px;
+    padding: 8px;
+    transition: all 0.15s;
 }
 
-.btn:hover {
-    background-color: rgba(205, 214, 244, 0.1);
+.app-grid .app-cell:hover {
+    border-color: var(--pink);
+    box-shadow: 0 0 12px var(--pink-glow);
+    background: rgba(255, 45, 149, 0.05);
 }
 
-.btn-primary {
-    background-color: rgba(137, 180, 250, 0.2);
-    color: #89b4fa;
-    border-color: rgba(137, 180, 250, 0.3);
+.app-icon {
+    color: var(--cyan);
 }
 
-.btn-primary:hover {
-    background-color: rgba(137, 180, 250, 0.3);
+.app-label {
+    color: var(--text);
+    font-size: 11px;
+    margin-top: 4px;
 }
 
-.btn-danger {
-    background-color: rgba(243, 139, 168, 0.15);
-    color: #f38ba8;
-    border-color: rgba(243, 139, 168, 0.3);
-}
-
-.btn-danger:hover {
-    background-color: rgba(243, 139, 168, 0.25);
-}
-
-.btn-ghost {
+/* ── Notifications ── */
+#notification-panel {
     background: transparent;
-    color: #a6adc8;
+}
+
+.notification-card {
+    background: rgba(18, 18, 42, 0.95);
+    border: 1px solid var(--cyan);
+    border-radius: 6px;
+    padding: 12px;
+    box-shadow: 0 0 16px var(--cyan-glow), 0 4px 20px rgba(0, 0, 0, 0.4);
+    margin-bottom: 8px;
+}
+
+.notif-title {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--pink);
+}
+
+.notif-message {
+    font-size: 12px;
+    color: var(--text);
+    margin-top: 4px;
+}
+
+.notif-close {
+    background: transparent;
     border: none;
-}
-
-.btn-ghost:hover {
-    color: #cdd6f4;
-    background-color: rgba(205, 214, 244, 0.06);
-}
-
-.btn-sm {
-    padding: 4px 10px;
-    font-size: 12px;
-}
-
-/* =========================================================================
-   ENTRY
-   ========================================================================= */
-
-#search-entry,
-#cmd-entry {
-    background-color: rgba(49, 50, 68, 0.6);
-    color: #cdd6f4;
-    border: 1px solid rgba(205, 214, 244, 0.1);
-    border-radius: 6px;
-    padding: 7px 10px;
-    font-size: 13px;
-}
-
-#search-entry:focus,
-#cmd-entry:focus {
-    border-color: rgba(137, 180, 250, 0.4);
-}
-
-#disabled-entry {
-    background-color: rgba(49, 50, 68, 0.3);
-    color: #585b70;
-    border: 1px solid rgba(205, 214, 244, 0.04);
-    border-radius: 6px;
-    padding: 7px 10px;
-    font-size: 13px;
-}
-
-/* =========================================================================
-   ICONS
-   ========================================================================= */
-
-.showcase-icon {
-    color: #a6adc8;
-}
-
-.showcase-icon:hover {
-    color: #89b4fa;
-}
-
-/* =========================================================================
-   OVERLAY
-   ========================================================================= */
-
-.overlay-base {
-    background-color: rgba(49, 50, 68, 0.4);
-    border: 1px dashed rgba(205, 214, 244, 0.1);
-    border-radius: 8px;
-    padding: 16px;
-    min-height: 60px;
-}
-
-.overlay-badge {
-    background-color: #f38ba8;
-    color: #11111b;
-    font-size: 11px;
-    font-weight: bold;
-    padding: 2px 7px;
-    border-radius: 10px;
-    min-width: 18px;
-}
-
-/* =========================================================================
-   SEPARATOR
-   ========================================================================= */
-
-separator {
-    color: rgba(205, 214, 244, 0.08);
-}
-
-/* =========================================================================
-   MISC
-   ========================================================================= */
-
-.resize-grip {
-    color: #45475a;
+    color: var(--text-dim);
     font-size: 16px;
+    min-width: 20px;
+    min-height: 20px;
 }
 
-.mode-label {
-    color: #a6e3a1;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-.hint {
-    color: #585b70;
-    font-size: 11px;
+.notif-close:hover {
+    color: var(--pink);
+    text-shadow: 0 0 6px var(--pink-glow);
 }

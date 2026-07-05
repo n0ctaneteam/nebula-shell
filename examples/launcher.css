@@ -1,0 +1,61 @@
+#launcher {
+    background: rgba(10, 10, 26, 0.95);
+    border: 1px solid #b400ff;
+    border-radius: 8px;
+    box-shadow: 0 0 24px #b400ff66;
+}
+
+.launcher-tabs .tab-button {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #8888aa;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    padding: 4px 12px;
+    transition: all 0.15s;
+}
+
+.launcher-tabs .tab-button:hover {
+    color: #00e5ff;
+    border-bottom-color: #00e5ff;
+}
+
+.search-entry {
+    background: #1a1a3e;
+    border: 1px solid #2a2a5e;
+    border-radius: 4px;
+    color: #e0e0ff;
+    font-family: "JetBrains Mono", monospace;
+    padding: 4px 8px;
+    margin: 8px 0;
+}
+
+.search-entry:focus {
+    border-color: #ff2d95;
+    box-shadow: 0 0 8px #ff2d9588;
+}
+
+.app-grid .app-cell {
+    background: #1a1a3e;
+    border: 1px solid #2a2a5e;
+    border-radius: 6px;
+    padding: 8px;
+    transition: all 0.15s;
+}
+
+.app-grid .app-cell:hover {
+    border-color: #ff2d95;
+    box-shadow: 0 0 12px #ff2d9588;
+    background: rgba(255, 45, 149, 0.05);
+}
+
+.app-icon {
+    color: #00e5ff;
+}
+
+.app-label {
+    color: #e0e0ff;
+    font-size: 11px;
+    margin-top: 4px;
+}

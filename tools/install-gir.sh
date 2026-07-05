@@ -9,10 +9,11 @@ set -euo pipefail
 GIR_FILE="$1"
 DATADIR="${2:-share}"
 LIBDIR="${3:-lib}"
+PREFIX="${4:-${PREFIX:-/usr}}"
 DESTDIR="${DESTDIR:-}"
 
-GIR_DIR="${DESTDIR}/usr/${DATADIR}/gir-1.0"
-TYPELIB_DIR="${DESTDIR}/usr/${LIBDIR}/girepository-1.0"
+GIR_DIR="${DESTDIR}${PREFIX}/${DATADIR}/gir-1.0"
+TYPELIB_DIR="${DESTDIR}${PREFIX}/${LIBDIR}/girepository-1.0"
 
 mkdir -p "$GIR_DIR"
 mkdir -p "$TYPELIB_DIR"

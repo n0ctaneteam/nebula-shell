@@ -159,11 +159,11 @@ meson compile -C build```
 
 **Test**
 ```bash
-./build/src/nebula-shell run```
+./build/nebula-shell run```
 
 **Debug**
 ```bash
-GTK_DEBUG=interactive ./build/src/nebula-shell run```
+GTK_DEBUG=interactive ./build/nebula-shell run```
 
 **Install**
 ```bash

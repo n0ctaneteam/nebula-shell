@@ -25,7 +25,7 @@ namespace Lua {
     public int lua_pcall(State L, int nargs, int nresults, int errfunc);
 
     [CCode (cname = "lua_getglobal")]
-    public void lua_getglobal(State L, string name);
+    public int lua_getglobal(State L, string name);
 
     [CCode (cname = "lua_setglobal")]
     public void lua_setglobal(State L, string name);
@@ -40,7 +40,7 @@ namespace Lua {
     public void lua_pushnumber(State L, double n);
 
     [CCode (cname = "lua_pushinteger")]
-    public void lua_pushinteger(State L, long n);
+    public void lua_pushinteger(State L, int64 n);
 
     [CCode (cname = "lua_pushstring")]
     public void lua_pushstring(State L, string s);
@@ -55,7 +55,7 @@ namespace Lua {
     public double lua_tonumber(State L, int index);
 
     [CCode (cname = "lua_tointeger")]
-    public long lua_tointeger(State L, int index);
+    public int64 lua_tointeger(State L, int index);
 
     [CCode (cname = "lua_tostring")]
     public unowned string lua_tostring(State L, int index);
@@ -87,11 +87,20 @@ namespace Lua {
     [CCode (cname = "lua_remove")]
     public void lua_remove(State L, int index);
 
+    [CCode (cname = "lua_insert")]
+    public void lua_insert(State L, int index);
+
+    [CCode (cname = "lua_rawget")]
+    public int lua_rawget(State L, int index);
+
     [CCode (cname = "lua_rawgeti")]
-    public int lua_rawgeti(State L, int index, long n);
+    public int lua_rawgeti(State L, int index, int64 n);
+
+    [CCode (cname = "lua_absindex")]
+    public int lua_absindex(State L, int index);
 
     [CCode (cname = "lua_rawseti")]
-    public void lua_rawseti(State L, int index, long n);
+    public void lua_rawseti(State L, int index, int64 n);
 
     [CCode (cname = "lua_type")]
     public int lua_type(State L, int index);
@@ -101,6 +110,12 @@ namespace Lua {
 
     [CCode (cname = "lua_error")]
     public int lua_error(State L);
+
+    [CCode (cname = "luaL_len")]
+    public int64 luaL_len(State L, int index);
+
+    [CCode (cname = "lua_rawlen")]
+    public ulong lua_rawlen(State L, int index);
 
     [CCode (cname = "lua_settop")]
     public void lua_settop(State L, int index);
@@ -116,9 +131,6 @@ namespace Lua {
 
     [CCode (cname = "lua_close")]
     public void lua_close(State L);
-
-    [CCode (cname = "LUA_GLOBALSINDEX")]
-    public const int GLOBALSINDEX;
 
     [CCode (cname = "LUA_MULTRET")]
     public const int MULTRET;

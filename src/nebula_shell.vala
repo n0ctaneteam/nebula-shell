@@ -3,7 +3,7 @@ int main(string[] args) {
 
     if (args.length < 2) {
         NebulaShell.CLI.Commands.show_help();
-        return 0;
+        return 1;
     }
 
     string command = args[1];
@@ -18,7 +18,8 @@ int main(string[] args) {
             if (command_args.length > 0) {
                 Environment.set_variable("NEBULA_CONFIG", command_args[0], true);
             }
-            return app.run(command_args);
+            string[] app_args = new string[] { args[0] };
+            return app.run(app_args);
 
         case "inspect":
             return NebulaShell.CLI.Inspector.run(command_args);

@@ -33,13 +33,13 @@ function yaml.parse_lines(lines, start_idx, end_idx)
         local line = lines[i]
         if line == nil then
             i = i + 1
-            continue
+            goto continue
         end
 
         local line_stripped = line:match("^%s*(.-)%s*$")
         if line_stripped == "" or line_stripped:sub(1, 1) == "#" then
             i = i + 1
-            continue
+            goto continue
         end
 
         local indent = line:match("^(%s*)")
@@ -56,17 +56,27 @@ function yaml.parse_lines(lines, start_idx, end_idx)
         local list_item = line:match("^%s*%-%s+(.*)")
         if list_item then
             local items = {}
+            local pending_key = nil
+
+            -- Check if first item is a bare key (e.g. "nebula/workspaces:")
+            local first_is_key = list_item:match("^[%w_/]+:$")
+            if first_is_key then
+                pending_key = list_item:match("^([%w_/]+):")
+            else
+                table.insert(items, yaml.parse_value(list_item))
+            end
             i = i + 1
+
             while i <= end_idx do
                 local next_line = lines[i]
                 if next_line == nil then
                     i = i + 1
-                    continue
+                    goto inner_continue
                 end
                 local next_stripped = next_line:match("^%s*(.-)%s*$")
                 if next_stripped == "" or next_stripped:sub(1, 1) == "#" then
                     i = i + 1
-                    continue
+                    goto inner_continue
                 end
 
                 local next_indent = #(next_line:match("^(%s*)"))
@@ -76,6 +86,7 @@ function yaml.parse_lines(lines, start_idx, end_idx)
 
                 local next_item = next_line:match("^%s*%-%s+(.*)")
                 if next_item then
+                    -- Another list item at the same level
                     local val = yaml.parse_value(next_item)
                     if type(val) == "string" and next_item:match("^[%w_/]+:") then
                         local sub_key, sub_val = yaml.parse_kv(next_item)
@@ -87,13 +98,35 @@ function yaml.parse_lines(lines, start_idx, end_idx)
                     end
                     i = i + 1
                 else
+                    -- Sub-properties block - merge into pending_key or add as flat
                     local rest, next_i = yaml.parse_lines(lines, i, end_idx)
                     if rest and next(rest) then
-                        table.insert(items, rest)
+                        if pending_key then
+                            local merged = {}
+                            merged[pending_key] = rest
+                            table.insert(items, merged)
+                            pending_key = nil
+                        else
+                            table.insert(items, rest)
+                        end
+                    elseif pending_key then
+                        local merged = {}
+                        merged[pending_key] = {}
+                        table.insert(items, merged)
+                        pending_key = nil
                     end
                     i = next_i
                     break
                 end
+                    ::inner_continue::
+            end
+
+            -- Flush last pending_key if inner loop ended without sub-props
+            if pending_key then
+                local merged = {}
+                merged[pending_key] = {}
+                table.insert(items, merged)
+                pending_key = nil
             end
 
             if #items > 0 then
@@ -159,6 +192,18 @@ function yaml.parse_value(val)
     end
 
     return val
+end
+
+function yaml.parse_kv(str)
+    local colon = str:find(":")
+    if not colon then return nil, str end
+    local key = str:sub(1, colon - 1):match("^%s*(.-)%s*$")
+    if key == "" then return nil, str end
+    local val_str = str:sub(colon + 1):match("^%s*(.-)%s*$")
+    if val_str == "" then
+        return key, {}  -- empty table for sub-properties that follow
+    end
+    return key, yaml.parse_value(val_str)
 end
 
 function yaml_parse_file(path)

@@ -17,6 +17,7 @@ namespace NebulaShell {
                 Logger.error("Failed to load YAML parser");
                 return false;
             }
+            lua_bridge.pop(); // pop yaml module table (kept alive by yaml_parse_file upvalue)
 
             string? config_path = resolve_config_path();
             if (config_path == null) {
@@ -67,7 +68,10 @@ namespace NebulaShell {
                 Logger.warning("No events.lua found");
                 return;
             }
-            lua_bridge.load_file(events_path);
+            if (!lua_bridge.do_file(events_path)) {
+                Logger.error("Failed to load events.lua - no event handlers available");
+                return;
+            }
             Logger.info(@"Loaded events: $(events_path)");
         }
     }

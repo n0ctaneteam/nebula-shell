@@ -3,72 +3,25 @@
 ## Status Legend
 - [ ] Pending
 - [x] Completed
-- [-] Blocked/Skipped
+- [~] In Progress
 
 ---
 
-## P0: YAML Schema System
+## P0: Critical Bugs
 
-- [ ] `data/nebula-shell.schema.json` - Core JSON Schema for built-in widgets
-- [ ] `src/cli/schema_gen.vala` - `nebula-shell schema` CLI command
+- [ ] **1. Fix workspace button click handler** — `_on_click` closure stored but not dispatched by `setup_click_handler`. Add generic closure dispatch in C bridge.
+- [ ] **2. Fix CPU meter init timing** — `widget_set_fraction()` called before GTK widget registered. Move to deferred timer or `M.update`.
+- [ ] **3. Add workspace M.update** — Workspace has timer but no `M.update()`. Add function that calls `refresh_workspaces(config)`.
 
-## P1: Foundation
+## P1: Medium Issues
 
-- [ ] `vapi/lua.vapi` - Lua 5.4 C API bindings
-- [ ] `src/utils/logger.vala` - Colored stderr logging
-- [ ] `src/utils/file_utils.vala` - File resolution utilities
+- [ ] **4. Verify panel toggle end-to-end** — Ensure `toggle_panel` global function in events.lua works with button click handler.
+- [ ] **5. Fix CSS syntax warning** — `style.css:123:18-22: Expected a number`.
+- [ ] **6. Fix NEBULA_SYSROOT path confusion** — Make env var intuitive (point to `etc/nebula-shell/` or fix path building).
+- [ ] **7. Verify/test CLI commands** — `inspect`, `schema`, `help`, `version`.
 
-## P2: Core Framework
+## P2: Polish
 
-- [ ] `src/core/lua_bridge.vala` - Lua VM wrapper
-- [ ] `src/core/config_loader.vala` - YAML config loader
-- [ ] `src/core/registry.vala` - Widget registry + D-Bus
-- [ ] `src/core/widget_builder.vala` - Widget tree builder
-- [ ] `src/core/layer_shell.vala` - Wayland layer-shell wrapper
-- [ ] `src/core/css_manager.vala` - CSS provider
-- [ ] `src/core/application.vala` - GTK Application lifecycle
-
-## P3: Lua Widgets
-
-- [ ] `etc/nebula-shell/widgets/nebula/bar.lua`
-- [ ] `etc/nebula-shell/widgets/nebula/panel.lua`
-- [ ] `etc/nebula-shell/widgets/nebula/clock.lua`
-- [ ] `etc/nebula-shell/widgets/nebula/cpu.lua`
-- [ ] `etc/nebula-shell/widgets/nebula/button.lua`
-- [ ] `etc/nebula-shell/widgets/nebula/label.lua`
-- [ ] `etc/nebula-shell/widgets/nebula/box.lua`
-- [ ] `etc/nebula-shell/widgets/nebula/separator.lua`
-- [ ] `etc/nebula-shell/widgets/nebula/workspaces.lua`
-
-## P4: YAML Parser + Config
-
-- [ ] `etc/nebula-shell/widgets/yaml.lua` - Minimal YAML parser
-- [ ] `etc/nebula-shell/config.yaml` - Update namespace
-- [ ] `etc/nebula-shell/events.lua` - Update require paths
-
-## P5: CLI
-
-- [ ] `src/nebula_shell.vala` - Entry point
-- [ ] `src/cli/main.vala` - Arg parser + dispatch
-- [ ] `src/cli/commands.vala` - Help/version
-- [ ] `src/cli/runner.vala` - Application runner
-- [ ] `src/cli/inspector.vala` - D-Bus inspector
-
-## P6: Build System
-
-- [ ] `meson.build` - Fix build config
-- [ ] `makefile` - Fix targets
-
-## P7: Documentation
-
-- [ ] `README.md` - Full project docs
-- [ ] `data/nebula-shell.1` - Man page updates
-
----
-
-## Post-Build
-
-- [ ] QA Testing (sub-agents)
-- [ ] Optimization (sub-agents)
-- [ ] Docs Writing (sub-agents)
-- [ ] `notify-send` completion notification
+- [ ] **8. Fix binary path in AGENTS.md/docs** — Change `./build/src/nebula-shell` to `./build/nebula-shell`.
+- [ ] **9. Update documentation** — Deploy docs-writer sub-agent for README/man page.
+- [ ] **10. Test on real Hyprland** — Run without `timeout` in a Wayland session.

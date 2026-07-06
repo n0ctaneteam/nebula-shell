@@ -28,8 +28,6 @@ function M.create(props, event_handlers)
     config._prev_idle = 0
     config._prev_total = 0
 
-    M.read_cpu(config)
-
     if config.id then
         register_widget(config.id, config)
     end
@@ -104,6 +102,8 @@ function M.read_cpu(config)
     config._prev_idle = idle_all
 end
 
+M.update = M.read_cpu
+
 function M.destroy(config)
     config._timer_enabled = false
     log_info("CPU meter destroyed: " .. (config.id or "unknown"))
@@ -112,7 +112,11 @@ end
 function M.merge_defaults(props)
     local result = {}
     for key, default in pairs(M.defaults) do
-        result[key] = props[key] or default
+        if props[key] ~= nil then
+            result[key] = props[key]
+        else
+            result[key] = default
+        end
     end
     for key, value in pairs(props) do
         result[key] = value

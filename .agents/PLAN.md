@@ -1,191 +1,59 @@
-# NebulaShell - Complete Build Plan
+# NebulaShell - Build Plan
 
 ## Project: NebulaShell
 ## Lightweight Wayland Widget Framework (Vala + GTK4 + Lua + YAML)
 
 ---
 
-## Architecture Decisions
+## Current Status: BUILD COMPLETE (all 20 widgets compile and run)
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Namespace | `nebula/` | Matches docs (AGENTS.md, SUMMARY.md), shorter |
-| YAML Parsing | Lua-based (`yaml.lua`) | No extra C deps; bundle tiny YAML parser |
-| Binary | Single binary with subcommands | Simpler for users |
-| Inspector IPC | D-Bus via GLib | Built into GLib/GIO, no extra deps |
-| Schema | JSON Schema for YAML editor intellisense | Language server support (yaml-language-server) |
-| Schema Generation | Bundled core + CLI regenerate (`nebula-shell schema`) | Covers built-in + custom widgets |
+All core files, Lua widgets, CLI tool, and build system are implemented and functional.
+The application starts cleanly, builds all widgets, and shuts down gracefully.
+Several bugs and polish items remain before a 1.0 release.
 
 ---
 
-## Architecture Diagram
+## Remaining Bugs (High Priority)
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     USER LAYER                              │
-│  config.yaml ← validated by ← JSON Schema (editor)          │
-│  events.lua (event handlers)                                │
-│  ~/.config/nebula-shell/widgets/custom/* (user widgets)     │
-├─────────────────────────────────────────────────────────────┤
-│                   FRAMEWORK LAYER                           │
-│  Lua Bridge (Vala↔Lua)   YAML Parser (yaml.lua)             │
-│  Widget Builder           Schema Validator                   │
-│  Widget Registry          Event Dispatcher                   │
-├─────────────────────────────────────────────────────────────┤
-│                     CORE LAYER                              │
-│  GTK4 widgets  Wayland layer-shell  D-Bus IPC               │
-│  CSS styling   Timers / IO         CLI tool                 │
-└─────────────────────────────────────────────────────────────┘
-```
+| # | Bug | File(s) | Description |
+|---|-----|---------|-------------|
+| 1 | **Workspace buttons don't click** | `widget_builder.vala`, `workspaces.lua` | `_on_click` stores a Lua closure, but `setup_click_handler` looks for `on_click` (string function name). Need a generic `_on_click` bridge that can dispatch closures or function names. |
+| 2 | **CPU meter set_fraction before registration** | `cpu.lua` | `M.create` calls `widget_set_fraction()` before GTK widget is registered (happens after `M.create` returns). Calls fail silently. Move to `M.update` or defer to timer callback. |
+| 3 | **Workspaces never refresh** | `workspaces.lua`, `widget_builder.vala` | Workspace has `_timer_enabled` + `_timer_interval` but no `M.update()` function. `timer_tick` skips if `M.update` absent. Add `M.update` that calls `refresh_workspaces`. |
 
----
+## Remaining Issues (Medium Priority)
 
-## File Inventory & Status
+| # | Issue | File(s) | Description |
+|---|-------|---------|-------------|
+| 4 | **Panel toggle not verified** | `config.yaml`, `events.lua`, `bar.lua` | Bar's "toggle_panel_btn" references `on_click: toggle_panel` in events.lua. Need to verify the global function exists and works end-to-end. |
+| 5 | **CSS syntax warning** | `styles/style.css:123` | `Expected a number` warning on CSS parse. Minor syntax issue. |
+| 6 | **NEBULA_SYSROOT path confusion** | `file_utils.vala` | Must point to repo root, not `etc/nebula-shell/`. `find_config` appends `/etc/nebula-shell/` making the env var unintuitive. |
+| 7 | **CLI commands incomplete** | `commands.vala`, `inspector.vala`, `schema_gen.vala` | Only `run` command works. `inspect`, `schema`, `help/version` need verification/testing. |
+| 8 | **Binary path mismatch in docs** | `AGENTS.md`, docs | Actual binary at `./build/nebula-shell`, docs reference `./build/src/nebula-shell`. |
 
-### Phase 0: YAML Schema System
+## Remaining Tasks (Low Priority)
 
-| File | Status | Lines | Description |
-|------|--------|-------|-------------|
-| `data/nebula-shell.schema.json` | NEW | ~150 | Bundled JSON Schema for built-in widgets |
-| `src/cli/schema_gen.vala` | NEW | ~100 | `nebula-shell schema` CLI command |
-
-### Phase 1: Foundation
-
-| File | Status | Lines | Description |
-|------|--------|-------|-------------|
-| `vapi/lua.vapi` | NEW | ~80 | Lua 5.4 C API bindings |
-| `src/utils/logger.vala` | NEW | ~60 | Colored stderr logging |
-| `src/utils/file_utils.vala` | NEW | ~40 | Config/widget file resolution |
-
-### Phase 2: Core Framework
-
-| File | Status | Lines | Description |
-|------|--------|-------|-------------|
-| `src/core/lua_bridge.vala` | REWRITE | ~200 | Lua VM wrapper (load, call, register functions, table↔HashTable) |
-| `src/core/config_loader.vala` | REWRITE | ~150 | YAML config load + merge via yaml.lua |
-| `src/core/registry.vala` | REWRITE | ~120 | Widget registry + D-Bus exposure |
-| `src/core/widget_builder.vala` | REWRITE | ~180 | Build widget tree from config |
-| `src/core/layer_shell.vala` | NEW | ~60 | Wayland layer-shell wrapper |
-| `src/core/css_manager.vala` | REWRITE | ~50 | GTK CSS provider + override system |
-| `src/core/application.vala` | REWRITE | ~100 | GTK Application lifecycle |
-
-### Phase 3: Lua Widgets (etc/nebula-shell/widgets/nebula/)
-
-| File | Status | Lines | Description |
-|------|--------|-------|-------------|
-| `bar.lua` | NEW | ~50 | Top bar window with children |
-| `panel.lua` | REWRITE | ~70 | Toggleable panel, layer-shell |
-| `clock.lua` | REWRITE | ~80 | Time display, click toggle format |
-| `cpu.lua` | NEW | ~100 | CPU usage meter |
-| `button.lua` | REWRITE | ~50 | Clickable button |
-| `label.lua` | NEW | ~30 | Text label |
-| `box.lua` | NEW | ~40 | Container (HBox/VBox) |
-| `separator.lua` | NEW | ~25 | Visual separator |
-| `workspaces.lua` | NEW | ~120 | Hyprland workspace switcher |
-
-### Phase 4: YAML Parser + Config
-
-| File | Status | Lines | Description |
-|------|--------|-------|-------------|
-| `etc/nebula-shell/widgets/yaml.lua` | NEW | ~200 | Minimal YAML→Lua table parser |
-| `etc/nebula-shell/config.yaml` | UPDATE | ~70 | Fix namespace: nebula_shell/ → nebula/ |
-| `etc/nebula-shell/events.lua` | UPDATE | ~40 | Fix require paths |
-
-### Phase 5: CLI
-
-| File | Status | Lines | Description |
-|------|--------|-------|-------------|
-| `src/nebula_shell.vala` | REWRITE | ~15 | Single entry point, dispatch |
-| `src/cli/main.vala` | REWRITE | ~50 | Arg parser + dispatch |
-| `src/cli/commands.vala` | REWRITE | ~90 | Help/version display |
-| `src/cli/runner.vala` | REWRITE | ~30 | Application runner |
-| `src/cli/inspector.vala` | REWRITE | ~200 | D-Bus based inspector |
-
-### Phase 6: Build System
-
-| File | Status | Lines | Description |
-|------|--------|-------|-------------|
-| `meson.build` | REWRITE | ~80 | Fix deps, sources, install rules |
-| `makefile` | UPDATE | ~17 | Fix run target |
-
-### Phase 7: Documentation
-
-| File | Status | Lines | Description |
-|------|--------|-------|-------------|
-| `README.md` | REWRITE | ~200 | Full project docs |
-| `data/nebula-shell.1` | UPDATE | ~70 | Man page updates |
+| # | Task | Description |
+|---|------|-------------|
+| 9 | **Test on real Hyprland** | All testing done via `timeout 5`. Verify gtk4-layer-shell presentation in actual Wayland session. |
+| 10 | **Install documentation** | `README.md`, man page updates, installation docs. |
 
 ---
 
-## Implementation Order (Dependency-Aware)
+## Implementation Order
 
 ```
- 1. vapi/lua.vapi          (no deps)
- 2. src/utils/logger.vala  (no deps)
- 3. src/utils/file_utils.vala (no deps)
- 4. src/core/lua_bridge.vala  (dep: 1)
- 5. etc/nebula-shell/widgets/yaml.lua (no deps)
- 6. src/core/config_loader.vala  (dep: 4, 5)
- 7. src/core/registry.vala  (dep: 4, 2)
- 8. src/core/layer_shell.vala (no deps)
- 9. src/core/widget_builder.vala (dep: 4, 6, 7)
-10. src/core/css_manager.vala (no deps)
-11. src/core/application.vala (dep: 4-10)
-12. All 9 Lua widgets (dep: 4, for testing)
-13. data/nebula-shell.schema.json (dep: 12)
-14. src/cli/schema_gen.vala (dep: 4)
-15. src/cli/main.vala (dep: 4)
-16. src/cli/commands.vala (dep: 15)
-17. src/cli/runner.vala (dep: 15, 11)
-18. src/cli/inspector.vala (dep: 15, 7)
-19. src/nebula_shell.vala (dep: 15, 11)
-20. etc/nebula-shell/config.yaml (dep: 12)
-21. etc/nebula-shell/events.lua (dep: 12)
-22. meson.build, makefile
-23. README.md, man page
+ 1. Fix workspace button click handler   (P0 bug)
+ 2. Fix CPU meter init timing            (P0 bug)
+ 3. Add workspace M.update + refresh     (P0 bug)
+ 4. Verify panel toggle                  (P1)
+ 5. Fix CSS warning                      (P1)
+ 6. Fix NEBULA_SYSROOT path confusion    (P1)
+ 7. Test/verify CLI commands             (P1)
+ 8. Fix binary path in docs              (P2)
+ 9. Write/update documentation           (P2)
+10. Test on real Hyprland                (P2)
 ```
-
----
-
-## Key Design Patterns
-
-### Lua Widget Contract
-```lua
-local M = {}
-M.schema = {
-    id          = { type = "string" },
-    style_class = { type = "string", default = "widget-class" },
-    -- ...
-}
-M.defaults = {
-    style_class = "widget-class",
-}
-function M.create(props, event_handlers) ... end
-function M.destroy(widget) ... end         -- optional
-function M.merge_defaults(props) ... end   -- helper
-return M
-```
-
-### Vala ↔ Lua Binding Pattern
-- Bridge exposes: `get_widget_by_id(id)`, `register_widget(id, widget)`, `log_info()`, `log_error()`
-- Lua calls Vala functions via `lua_bridge.register_function("name", callback)`
-- GTK4 widget pointers stored as Lua lightuserdata
-
-### Config Override Priority
-1. `~/.config/nebula-shell/` (user)
-2. `/etc/nebula-shell/` (system)
-3. Hardcoded defaults
-
-### Widget Resolution Path
-1. `~/.config/nebula-shell/widgets/<ns>/<name>.lua`
-2. `/etc/nebula-shell/widgets/<ns>/<name>.lua`
-
-### JSON Schema for YAML Intellisense
-- Bundled: `data/nebula-shell.schema.json` (built-in widgets)
-- Regenerated via `nebula-shell schema` (includes custom widgets)
-- Referenced by YAML language server for autocompletion
-- VS Code: `"yaml.schemas": { "~/.config/nebula-shell/schema.json": ["config.yaml"] }`
-- Inline: `# yaml-language-server: $schema=~/.config/nebula-shell/schema.json`
 
 ---
 
@@ -195,11 +63,3 @@ return M
 - `gtk4-layer-shell-0.1` - Wayland layer shell protocol
 - `glib-2.0`, `gobject-2.0`, `gio-2.0` - GLib/GObject/GIO
 - `lua5.4` (or 5.3/5.2) - Lua VM
-
----
-
-## Post-Build Pipeline
-
-```
-Build → QA Testing (sub-agents) → Optimization (sub-agents) → Docs (sub-agents) → notify-send
-```

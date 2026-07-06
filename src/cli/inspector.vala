@@ -61,7 +61,10 @@ namespace NebulaShell.CLI {
             }
 
             try {
-                var file = File.new_for_path("/tmp/nebula-shell/widgets.dat");
+                string? runtime_dir = Environment.get_variable("XDG_RUNTIME_DIR");
+                if (runtime_dir == null) runtime_dir = "/tmp";
+                var ipc_path = Path.build_filename(runtime_dir, "nebula-shell", "widgets.dat");
+                var file = File.new_for_path(ipc_path);
                 if (!file.query_exists()) {
                     stderr.printf("Error: NebulaShell is not running.\n");
                     stderr.printf("Start NebulaShell first with: nebula-shell run\n");
@@ -69,7 +72,7 @@ namespace NebulaShell.CLI {
                 }
 
                 string content;
-                GLib.FileUtils.get_contents("/tmp/nebula-shell/widgets.dat", out content);
+                GLib.FileUtils.get_contents(ipc_path, out content);
                 var lines = content.split("\n");
                 if (lines.length < 2) {
                     stdout.printf("No widgets found.\n");
@@ -146,9 +149,9 @@ namespace NebulaShell.CLI {
             int i = 0;
             foreach (var w in widgets) {
                 stdout.printf("    {\n");
-                stdout.printf("      \"id\": \"%s\",\n", w.id);
-                stdout.printf("      \"type\": \"%s\",\n", w.type);
-                stdout.printf("      \"class\": \"%s\",\n", w.css_class);
+                stdout.printf("      \"id\": \"%s\",\n", escape_json(w.id));
+                stdout.printf("      \"type\": \"%s\",\n", escape_json(w.type));
+                stdout.printf("      \"class\": \"%s\",\n", escape_json(w.css_class));
                 stdout.printf("      \"visible\": %s\n", w.visible);
                 stdout.printf("    }%s\n", (i < (int) widgets.length() - 1) ? "," : "");
                 i++;
@@ -156,6 +159,29 @@ namespace NebulaShell.CLI {
 
             stdout.printf("  ]\n");
             stdout.printf("}\n");
+        }
+
+        private static string escape_json(string input) {
+            var builder = new StringBuilder();
+            int i = 0;
+            unichar c;
+            while (input.get_next_char(ref i, out c)) {
+                switch (c) {
+                    case '"':  builder.append("\\\""); break;
+                    case '\\': builder.append("\\\\"); break;
+                    case '\n': builder.append("\\n");  break;
+                    case '\r': builder.append("\\r");  break;
+                    case '\t': builder.append("\\t");  break;
+                    default:
+                        if (c < 0x20) {
+                            builder.append_printf("\\u%04x", (int) c);
+                        } else {
+                            builder.append_unichar(c);
+                        }
+                        break;
+                }
+            }
+            return builder.str;
         }
 
         private static void show_inspect_help() {

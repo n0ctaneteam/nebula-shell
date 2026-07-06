@@ -7,6 +7,17 @@ namespace NebulaShell {
         }
 
         public void load() {
+            string? sysroot = Environment.get_variable("NEBULA_SYSROOT");
+            if (sysroot != null) {
+                string dev_css = Path.build_filename(sysroot, "etc", "nebula-shell", "styles", "style.css");
+                var dev_file = File.new_for_path(dev_css);
+                if (dev_file.query_exists()) {
+                    load_from_file(dev_file);
+                    Logger.info(@"Loaded dev styles: $(dev_css)");
+                    return;
+                }
+            }
+
             string system_css = FileUtils.find_system_dir("styles/style.css");
             string user_css = FileUtils.find_user_dir("styles/style.css");
 

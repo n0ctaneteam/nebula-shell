@@ -2,8 +2,18 @@ namespace NebulaShell {
     public class LuaBridge : Object {
         private Lua.State L;
 
+        private static int panic_handler(Lua.State state) {
+            string? msg = Lua.lua_tostring(state, -1);
+            stderr.printf("LUA PANIC: %s\n", msg ?? "(no message)");
+            return 0;
+        }
+
         public LuaBridge() {
             L = Lua.luaL_newstate();
+            if (L == null) {
+                Logger.error("Failed to create Lua state - out of memory");
+            }
+            Lua.lua_atpanic(L, panic_handler);
             Lua.luaL_openlibs(L);
             setup_package_path();
             Logger.debug("LuaBridge initialized");
@@ -11,6 +21,14 @@ namespace NebulaShell {
 
 
         private void setup_package_path() {
+            string? sysroot = Environment.get_variable("NEBULA_SYSROOT");
+            string sysroot_widgets = "";
+            string sysroot_dir = "";
+            if (sysroot != null) {
+                sysroot_widgets = Path.build_filename(sysroot, "etc", "nebula-shell", "widgets", "?.lua");
+                sysroot_dir = Path.build_filename(sysroot, "etc", "nebula-shell", "?.lua");
+            }
+
             string user_widgets = Path.build_filename(
                 Environment.get_user_config_dir(),
                 "nebula-shell",
@@ -30,10 +48,18 @@ namespace NebulaShell {
                 "?.lua");
             string system_dir = "/etc/nebula-shell/?.lua";
 
-            string lua_path = "%s;%s;%s;%s;%s;%s".printf(
-                user_widgets, user_widgets_init,
-                system_widgets, system_widgets_init,
-                user_dir, system_dir);
+            string lua_path;
+            if (sysroot != null) {
+                lua_path = "%s;%s;%s;%s;%s;%s;%s;%s".printf(
+                    sysroot_widgets, user_widgets, user_widgets_init,
+                    system_widgets, system_widgets_init,
+                    sysroot_dir, user_dir, system_dir);
+            } else {
+                lua_path = "%s;%s;%s;%s;%s;%s".printf(
+                    user_widgets, user_widgets_init,
+                    system_widgets, system_widgets_init,
+                    user_dir, system_dir);
+            }
 
             Lua.lua_getglobal(L, "package");
             Lua.lua_getfield(L, -1, "path");
@@ -129,7 +155,10 @@ namespace NebulaShell {
         }
 
         public bool get_field(int index, string key) {
-            Lua.lua_getfield(L, index, key);
+            // Use rawget to bypass metatable handling and avoid potential panics
+            int abs_idx = Lua.lua_absindex(L, index);
+            Lua.lua_pushstring(L, key);
+            Lua.lua_rawget(L, abs_idx);
             return Lua.lua_type(L, -1) != Lua.TNIL;
         }
 
@@ -168,6 +197,13 @@ namespace NebulaShell {
                 Lua.lua_pop(L, 1);
                 return false;
             }
+            // Reorder stack: Lua expects function BELOW arguments.
+            // Caller pushed args first, then get_global pushed func on top.
+            // Current: [..., arg1, arg2, func]
+            // Need:    [..., func, arg1, arg2]
+            if (nargs > 0) {
+                Lua.lua_insert(L, -(nargs + 1));
+            }
             int result = Lua.lua_pcall(L, nargs, nresults, 0);
             if (result != 0) {
                 string err = Lua.lua_tostring(L, -1);
@@ -177,6 +213,8 @@ namespace NebulaShell {
             }
             return true;
         }
+
+        public unowned Lua.State get_L() { return L; }
 
         public void register_function(string name, owned Lua.LuaCFunction func) {
             Lua.lua_pushcclosure(L, func, 0);
@@ -208,6 +246,14 @@ namespace NebulaShell {
             Lua.lua_pushvalue(L, index);
         }
 
+        public void remove(int index) {
+            Lua.lua_remove(L, index);
+        }
+
+        public void insert(int index) {
+            Lua.lua_insert(L, index);
+        }
+
         public string[] get_table_keys() {
             string[] keys = {};
             Lua.lua_pushnil(L);
@@ -227,6 +273,7 @@ namespace NebulaShell {
                 len++;
                 Lua.lua_pop(L, 1);
             }
+            Lua.lua_pop(L, 1);
             return len;
         }
 

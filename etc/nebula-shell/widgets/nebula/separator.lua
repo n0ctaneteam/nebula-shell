@@ -14,6 +14,7 @@ M.defaults = {
 function M.create(props, event_handlers)
     local config = M.merge_defaults(props)
     config._type = "separator"
+    config._orientation = config.orientation
 
     if config.id then
         register_widget(config.id, config)
@@ -29,7 +30,11 @@ end
 function M.merge_defaults(props)
     local result = {}
     for key, default in pairs(M.defaults) do
-        result[key] = props[key] or default
+        if props[key] ~= nil then
+            result[key] = props[key]
+        else
+            result[key] = default
+        end
     end
     for key, value in pairs(props) do
         result[key] = value

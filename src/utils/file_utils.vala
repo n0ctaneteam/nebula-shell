@@ -11,6 +11,13 @@ namespace NebulaShell {
         }
 
         public static string? find_config(string name) {
+            string? sysroot = Environment.get_variable("NEBULA_SYSROOT");
+            if (sysroot != null) {
+                string dev_path = Path.build_filename(sysroot, "etc", "nebula-shell", name);
+                if (File.new_for_path(dev_path).query_exists())
+                    return dev_path;
+            }
+
             string user_path = Path.build_filename(
                 Environment.get_user_config_dir(),
                 "nebula-shell",
@@ -30,6 +37,14 @@ namespace NebulaShell {
 
             string ns = parts[0];
             string name = parts[1];
+
+            string? sysroot = Environment.get_variable("NEBULA_SYSROOT");
+            if (sysroot != null) {
+                string dev_path = Path.build_filename(
+                    sysroot, "etc", "nebula-shell", "widgets", ns, name + ".lua");
+                if (File.new_for_path(dev_path).query_exists())
+                    return dev_path;
+            }
 
             string user_path = Path.build_filename(
                 Environment.get_user_config_dir(),

@@ -80,13 +80,6 @@ namespace NebulaShell.CLI {
             sb.append_c('\n');
         }
 
-        private static void P(StringBuilder sb, string indent, string name, string type, string desc) {
-            L(sb, indent + "\"" + name + "\": {");
-            L(sb, indent + "  \"type\": \"" + type + "\",");
-            L(sb, indent + "  \"description\": \"" + desc + "\"");
-            L(sb, indent + "}");
-        }
-
         private static void block_start(StringBuilder sb, string indent, string name, string desc) {
             L(sb, indent + "\"" + name + "\": {");
             L(sb, indent + "  \"type\": \"object\",");

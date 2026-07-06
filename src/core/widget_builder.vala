@@ -34,11 +34,14 @@ namespace NebulaShell {
             lua_bridge.pop();
         }
 
-        private void create_widget_from_lua(string widget_type, int props_index) {
+        private Gtk.Widget? create_widget_from_lua(string widget_type, int props_index) {
             string? widget_path = FileUtils.find_widget(widget_type);
+            if (widget_path == null && widget_type.index_of("/") < 0) {
+                widget_path = FileUtils.find_widget(@"nebula/$(widget_type)");
+            }
             if (widget_path == null) {
                 Logger.error(@"Widget file not found: $(widget_type)");
-                return;
+                return null;
             }
 
             if (props_index < 0) {
@@ -47,33 +50,52 @@ namespace NebulaShell {
 
             if (!lua_bridge.load_file(widget_path)) {
                 Logger.error(@"Failed to load widget: $(widget_type)");
-                return;
+                return null;
             }
+
+            // Stack: [module_table]
 
             if (!lua_bridge.get_field(-1, "create")) {
                 Logger.error(@"Widget '$(widget_type)' has no create() function");
-                lua_bridge.pop();
-                lua_bridge.pop();
-                return;
+                lua_bridge.pop(2); // pop nil + module
+                return null;
             }
 
+            // Stack: [module_table, create_func]
             lua_bridge.push_value(props_index);
 
-            if (!lua_bridge.get_global("_widget_event_handlers")) {
-                lua_bridge.push_nil();
-            }
+            lua_bridge.get_global("_widget_event_handlers");
+            // nil pushed by get_global if global doesn't exist
+
+            // Stack: [module_table, create_func, props, handlers]
+            // Save module reference before pcall consumes it
+            Lua.lua_pushvalue(lua_bridge.get_L(), -4); // copy module
+            Lua.lua_insert(lua_bridge.get_L(), -5);    // move copy below everything
+            // Stack: [module_copy, module_table, create_func, props, handlers]
 
             if (!lua_bridge.call(2, 1)) {
                 Logger.error(@"Widget create() failed for: $(widget_type)");
-                lua_bridge.pop();
-                return;
+                lua_bridge.pop(3); // pop error + module + module_copy
+                return null;
             }
 
+            // Stack: [module_copy, module_table, config_table]
+
+            // Check if result is a table
             if (!lua_bridge.is_table(-1)) {
                 Logger.error("Widget create() must return a table");
-                lua_bridge.pop();
-                return;
+                lua_bridge.pop(3);
+                return null;
             }
+
+            // Store module reference in config for timer/dispatch callbacks
+            Lua.lua_pushvalue(lua_bridge.get_L(), -2); // copy module_table
+            Lua.lua_setfield(lua_bridge.get_L(), -2, "_module"); // config._module = module
+            // Stack: [module_copy, module_table, config]
+
+            lua_bridge.remove(-3); // remove module_copy
+            lua_bridge.remove(-2); // remove module_table
+            // Stack: [config]
 
             string? id = get_lua_field_string("id");
             string? style_class = get_lua_field_string("style_class");
@@ -90,7 +112,7 @@ namespace NebulaShell {
             if (widget == null) {
                 Logger.error(@"Failed to create GTK widget for type: $(widget_type_str ?? "nil")");
                 lua_bridge.pop();
-                return;
+                return null;
             }
 
             Registry.register(id, widget);
@@ -106,8 +128,8 @@ namespace NebulaShell {
             if (widget is Gtk.Window) {
                 string? anchor = get_lua_field_string("anchor");
                 if (anchor != null) {
-                    bool visible = !get_lua_field_bool("visible");
-                    LayerShell.init_window((Gtk.Window) widget, anchor, visible);
+                    bool use_exclusive = get_lua_field_bool("visible");
+                    LayerShell.init_window((Gtk.Window) widget, anchor, use_exclusive);
                 }
             }
 
@@ -119,6 +141,35 @@ namespace NebulaShell {
             if (on_click_func_name != null && widget is Gtk.Button) {
                 var btn = (Gtk.Button) widget;
                 setup_click_handler(btn, id, on_click_func_name);
+            } else if (widget is Gtk.Button) {
+                // Check for _on_click Lua closure (used by programmatic widgets)
+                lua_bridge.get_field(-1, "_on_click");
+                if (lua_bridge.is_function(-1)) {
+                    string captured_id = id;
+                    var btn = (Gtk.Button) widget;
+                    btn.clicked.connect(() => {
+                        lua_bridge.get_global("_nebula_widget_configs");
+                        if (lua_bridge.is_table(-1)) {
+                            lua_bridge.get_field(-1, captured_id);
+                            if (lua_bridge.is_table(-1)) {
+                                lua_bridge.get_field(-1, "_on_click");
+                                if (lua_bridge.is_function(-1)) {
+                                    lua_bridge.push_string(captured_id);
+                                    lua_bridge.call(1, 0);
+                                } else {
+                                    lua_bridge.pop();
+                                }
+                                lua_bridge.pop(); // pop config
+                            } else {
+                                lua_bridge.pop(); // pop nil
+                            }
+                            lua_bridge.pop(); // pop _nebula_widget_configs
+                        } else {
+                            lua_bridge.pop(); // pop nil
+                        }
+                    });
+                }
+                lua_bridge.pop(); // pop _on_click or nil
             }
 
             bool has_children = lua_bridge.get_field(-1, "_children");
@@ -133,12 +184,13 @@ namespace NebulaShell {
                     }
                 }
                 lua_bridge.pop();
-            } else if (has_children) {
-                lua_bridge.pop();
+            } else {
+                lua_bridge.pop(); // pop nil or non-table value
             }
 
             lua_bridge.pop();
             Logger.info(@"Built widget: $(widget_type) (id: $(id))");
+            return widget;
         }
 
         private Gtk.Widget? create_gtk_widget(string id, string? widget_type) {
@@ -211,55 +263,131 @@ namespace NebulaShell {
         private void setup_timer(string widget_id, double interval_sec) {
             uint interval_ms = (uint)(interval_sec * 1000);
             uint timer_id = GLib.Timeout.add(interval_ms, () => {
-                var widget = Registry.lookup(widget_id);
-                if (widget == null) return false;
-                return true;
+                return timer_tick(widget_id);
             });
             timers.insert(widget_id, timer_id);
+        }
+
+        private bool timer_tick(string widget_id) {
+            var widget = Registry.lookup(widget_id);
+            if (widget == null) return false;
+
+            lua_bridge.get_global("_nebula_widget_configs");
+            if (!lua_bridge.is_table(-1)) {
+                lua_bridge.pop();
+                return true;
+            }
+            lua_bridge.get_field(-1, widget_id);
+            if (!lua_bridge.is_table(-1)) {
+                lua_bridge.pop(2);
+                return true;
+            }
+
+            lua_bridge.get_field(-1, "_module");
+            if (!lua_bridge.is_table(-1)) {
+                lua_bridge.pop(3);
+                return true;
+            }
+
+            lua_bridge.get_field(-1, "update");
+            if (!lua_bridge.is_function(-1)) {
+                lua_bridge.pop(4);
+                return true;
+            }
+
+            Lua.lua_pushvalue(lua_bridge.get_L(), -3);
+            lua_bridge.call(1, 0);
+
+            lua_bridge.pop(3);
+            return true;
         }
 
         private void build_children(Gtk.Box parent_box) {
             if (!lua_bridge.is_table(-1)) return;
 
-            var keys = lua_bridge.get_table_keys();
-            if (keys.length == 0) return;
+            ulong raw_len = Lua.lua_rawlen(lua_bridge.get_L(), -1);
+            int len = (int) raw_len;
 
-            foreach (var key in keys) {
-                if (key == null) continue;
-                lua_bridge.get_field(-1, key);
-                if (lua_bridge.is_table(-1)) {
-                    string child_type = key;
-                    string child_id = "%s_%s".printf(parent_box.get_name(), child_type);
-                    string? child_wtype = null;
-                    if (lua_bridge.get_field(-1, "_type")) {
-                        child_wtype = lua_bridge.get_string(-1);
-                        lua_bridge.pop();
+            for (int i = 1; i <= len; i++) {
+                Lua.lua_rawgeti(lua_bridge.get_L(), -1, i);
+
+                if (!lua_bridge.is_table(-1)) {
+                    Lua.lua_pop(lua_bridge.get_L(), 1);
+                    continue;
+                }
+
+                // Two possible child entry formats:
+                //   A) YAML-wrapped: { ["nebula/type"] = {props} }
+                //   B) Programmatic flat: { _type="type", id="...", ... }
+                // Try wrapped key first (case A).
+                string? child_type = null;
+                bool found_wrapped = false;
+                Lua.lua_pushnil(lua_bridge.get_L());
+                while (Lua.lua_next(lua_bridge.get_L(), -2) != 0) {
+                    if (Lua.lua_type(lua_bridge.get_L(), -2) == Lua.TSTRING) {
+                        string k = Lua.lua_tostring(lua_bridge.get_L(), -2);
+                        if (k.index_of("/") >= 0) {
+                            child_type = k;
+                            found_wrapped = true;
+                            Lua.lua_pushvalue(lua_bridge.get_L(), -1);
+                            break;
+                        }
                     }
-                    Gtk.Widget? child = create_gtk_widget(child_id, child_wtype);
+                    Lua.lua_pop(lua_bridge.get_L(), 1);
+                }
+
+                if (found_wrapped) {
+                    // Stack: [..., child_entry, key, val, val_copy]
+                    Lua.lua_remove(lua_bridge.get_L(), -3); // remove val
+                    Lua.lua_remove(lua_bridge.get_L(), -2); // remove key
+                    // Stack: [..., child_entry, val_copy]
+                } else {
+                    // Lua 5.4: lua_next returning 0 pops key, pushes nothing.
+                    // Stack is [..., child_entry].
+                    child_type = get_lua_field_string("_type");
+                    if (child_type != null) {
+                        Lua.lua_pushvalue(lua_bridge.get_L(), -1);
+                        // Stack: [..., child_entry, child_entry_copy]
+                    }
+                }
+
+                if (child_type != null) {
+                    Gtk.Widget? child = create_widget_from_lua(child_type, -1);
+                    Lua.lua_pop(lua_bridge.get_L(), 1); // pop props copy
+
                     if (child != null) {
                         parent_box.append(child);
                     }
                 }
-                lua_bridge.pop();
+                Lua.lua_pop(lua_bridge.get_L(), 1); // pop child_entry
             }
         }
 
         private string? get_lua_field_string(string key) {
-            if (!lua_bridge.get_field(-1, key)) return null;
+            if (!lua_bridge.get_field(-1, key)) {
+                lua_bridge.pop(); // pop the nil
+                return null;
+            }
             string? val = lua_bridge.get_string(-1);
             lua_bridge.pop();
             return val;
         }
 
         private double get_lua_field_double(string key) {
-            if (!lua_bridge.get_field(-1, key)) return 0.0;
+            if (!lua_bridge.get_field(-1, key)) {
+                lua_bridge.pop(); // pop the nil
+                return 0.0;
+            }
             double? val = lua_bridge.get_number(-1);
             lua_bridge.pop();
             return val ?? 0.0;
         }
 
         private bool get_lua_field_bool(string key) {
-            if (!lua_bridge.get_field(-1, key)) return false;
+            if (!lua_bridge.get_field(-1, key)) {
+                lua_bridge.pop(); // pop the nil
+                return false;
+            }
             bool? val = lua_bridge.get_boolean(-1);
             lua_bridge.pop();
             return val ?? false;

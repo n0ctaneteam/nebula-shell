@@ -3,15 +3,17 @@
 
 -- Toggle panel visibility
 function toggle_panel_visibility(source_widget)
-    local is_visible = widget_get_visible("main_panel")
-    widget_set_visible("main_panel", not is_visible)
+    local panel_id = source_widget or "main_panel"
+    local is_visible = widget_get_visible(panel_id)
+    widget_set_visible(panel_id, not is_visible)
 
-    local toggle_btn = get_widget_by_id("toggle_panel_btn")
+    local toggle_id = panel_id .. "_toggle_btn"
+    local toggle_btn = get_widget_by_id(toggle_id)
     if toggle_btn then
         if not is_visible then
-            widget_set_label("toggle_panel_btn", "\u2715")
+            widget_set_label(toggle_id, "\u{2715}")
         else
-            widget_set_label("toggle_panel_btn", "\u2630")
+            widget_set_label(toggle_id, "\u{2630}")
         end
     end
 
@@ -20,11 +22,12 @@ end
 
 -- Toggle clock format
 function toggle_clock_format(source_widget)
-    local format = widget_get_label("system_clock")
+    local clock_id = source_widget or "system_clock"
+    local format = widget_get_label(clock_id)
     if format:find(":") then
-        widget_set_label("system_clock", os.date("%I:%M %p"))
+        widget_set_label(clock_id, os.date("%I:%M %p"))
     else
-        widget_set_label("system_clock", os.date("%H:%M:%S"))
+        widget_set_label(clock_id, os.date("%H:%M:%S"))
     end
     log_info("Clock format toggled")
 end

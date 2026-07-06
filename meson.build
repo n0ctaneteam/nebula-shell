@@ -21,7 +21,13 @@ if not lua_dep.found()
     lua_dep = dependency('lua5.2', required: false)
 endif
 
+if not lua_dep.found()
+    error('Lua dependency not found. Install lua5.2, lua5.3, or lua5.4 development package.')
+endif
+
 add_project_arguments(['--vapidir', meson.current_source_dir() / 'vapi'], language: 'vala')
+
+add_project_arguments(['--target-glib=2.72'], language: 'vala')
 
 src_files = files(
     'src/nebula_shell.vala',
@@ -37,9 +43,7 @@ src_files = files(
 )
 
 cli_files = files(
-    'src/cli/main.vala',
     'src/cli/commands.vala',
-    'src/cli/runner.vala',
     'src/cli/inspector.vala',
     'src/cli/schema_gen.vala'
 )
@@ -54,6 +58,10 @@ executable('nebula-shell',
 install_subdir('etc/nebula-shell',
     install_dir: get_option('sysconfdir'),
     strip_directory: false
+)
+
+install_data('data/nebula-shell.schema.json',
+    install_dir: get_option('datadir') / 'nebula-shell'
 )
 
 install_data('data/nebula-shell.desktop',

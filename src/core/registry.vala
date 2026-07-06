@@ -72,7 +72,27 @@ namespace NebulaShell {
         }
 
         public static void cleanup() {
+            if (widget_map == null) return;
             widget_map.remove_all();
+
+            // First destroy all top-level windows (cascades to children)
+            foreach (var w in widget_list) {
+                if (w is Gtk.Window) {
+                    ((Gtk.Window) w).destroy();
+                }
+            }
+
+            // Then unparent/dispose any remaining non-window widgets
+            foreach (var w in widget_list) {
+                if (!(w is Gtk.Window)) {
+                    if (w.get_parent() != null) {
+                        w.unparent();
+                    } else {
+                        w.dispose();
+                    }
+                }
+            }
+
             widget_list = {};
             Logger.info("Registry cleaned up");
         }

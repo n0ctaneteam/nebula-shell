@@ -25,8 +25,10 @@ namespace NebulaShell {
                 Logger.error("Failed to load configuration");
                 return;
             }
+            Logger.info("Config loaded, loading events...");
 
             config_loader.load_widget_events();
+            Logger.info("Events loaded, building widgets...");
 
             widget_builder = new WidgetBuilder(lua_bridge);
             widget_builder.build_from_config();
@@ -41,13 +43,21 @@ namespace NebulaShell {
             Logger.info("NebulaShell started successfully");
         }
 
+        private static string get_ipc_dir() {
+            string? runtime_dir = Environment.get_variable("XDG_RUNTIME_DIR");
+            if (runtime_dir == null) {
+                runtime_dir = "/tmp";
+            }
+            return Path.build_filename(runtime_dir, "nebula-shell");
+        }
+
         private void export_dbus_interface() {
             save_widget_state();
         }
 
         private void save_widget_state() {
             try {
-                var dir = File.new_for_path("/tmp/nebula-shell");
+                var dir = File.new_for_path(get_ipc_dir());
                 if (!dir.query_exists()) {
                     dir.make_directory_with_parents();
                 }
@@ -63,7 +73,7 @@ namespace NebulaShell {
                     builder.append(@"$(id)|$(type)|$(classes)|$(w.get_visible().to_string())\n");
                 }
 
-                var file = File.new_for_path("/tmp/nebula-shell/widgets.dat");
+                var file = File.new_for_path(Path.build_filename(get_ipc_dir(), "widgets.dat"));
                 file.replace_contents(builder.str.data, null, false, FileCreateFlags.NONE, null);
                 Logger.info("Widget state saved");
             } catch (Error e) {

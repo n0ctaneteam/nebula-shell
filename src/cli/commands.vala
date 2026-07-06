@@ -9,6 +9,7 @@ Usage:
 
 Commands:
   run [config.yaml]        Run NebulaShell with optional custom config
+  quit                     Quit a running NebulaShell instance
   inspect [options]        Inspect running widgets
   schema [options]         Generate JSON Schema for YAML intellisense
   help                     Show this help message

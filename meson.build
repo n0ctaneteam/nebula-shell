@@ -29,6 +29,8 @@ add_project_arguments(['--vapidir', meson.current_source_dir() / 'vapi'], langua
 
 add_project_arguments(['--target-glib=2.72'], language: 'vala')
 
+add_project_arguments(['--pkg', 'posix'], language: 'vala')
+
 src_files = files(
     'src/nebula_shell.vala',
     'src/core/application.vala',

@@ -7,13 +7,12 @@ function toggle_panel_visibility(source_widget)
     local is_visible = widget_get_visible(panel_id)
     widget_set_visible(panel_id, not is_visible)
 
-    local toggle_id = panel_id .. "_toggle_btn"
-    local toggle_btn = get_widget_by_id(toggle_id)
+    local toggle_btn = get_widget_by_id("toggle_panel_btn")
     if toggle_btn then
         if not is_visible then
-            widget_set_label(toggle_id, "\u{2715}")
+            widget_set_label("toggle_panel_btn", "\u{2715}")
         else
-            widget_set_label(toggle_id, "\u{2630}")
+            widget_set_label("toggle_panel_btn", "\u{2630}")
         end
     end
 

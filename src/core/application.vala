@@ -15,6 +15,13 @@ namespace NebulaShell {
         protected override void activate() {
             Logger.info("NebulaShell starting...");
 
+            var display = Gdk.Display.get_default();
+            if (display == null) {
+                Logger.error("No Wayland display available. NebulaShell requires a Wayland compositor (e.g., Hyprland).");
+                this.quit();
+                return;
+            }
+
             Registry.init();
 
             lua_bridge = new LuaBridge();
@@ -39,6 +46,7 @@ namespace NebulaShell {
             Registry.show_all();
 
             export_dbus_interface();
+            save_pid();
 
             Logger.info("NebulaShell started successfully");
         }
@@ -53,6 +61,40 @@ namespace NebulaShell {
 
         private void export_dbus_interface() {
             save_widget_state();
+        }
+
+        private void save_pid() {
+            try {
+                var dir = File.new_for_path(get_ipc_dir());
+                if (!dir.query_exists()) {
+                    dir.make_directory_with_parents();
+                }
+                var pid_path = Path.build_filename(get_ipc_dir(), "pid");
+                string pid_str = ((int) Posix.getpid()).to_string() + "\n";
+                var file = File.new_for_path(pid_path);
+                file.replace_contents(pid_str.data, null, false, FileCreateFlags.NONE, null);
+                Logger.info("PID saved");
+            } catch (Error e) {
+                Logger.warning(@"Failed to save PID: $(e.message)");
+            }
+        }
+
+        private static void cleanup_ipc() {
+            try {
+                var pid_path = Path.build_filename(get_ipc_dir(), "pid");
+                var pid_file = File.new_for_path(pid_path);
+                if (pid_file.query_exists()) {
+                    pid_file.delete();
+                }
+                var widgets_path = Path.build_filename(get_ipc_dir(), "widgets.dat");
+                var widgets_file = File.new_for_path(widgets_path);
+                if (widgets_file.query_exists()) {
+                    widgets_file.delete();
+                }
+                Logger.info("IPC files cleaned up");
+            } catch (Error e) {
+                Logger.warning(@"Failed to clean up IPC files: $(e.message)");
+            }
         }
 
         private void save_widget_state() {
@@ -84,6 +126,7 @@ namespace NebulaShell {
         protected override void shutdown() {
             Logger.info("NebulaShell shutting down...");
             Registry.cleanup();
+            cleanup_ipc();
             base.shutdown();
         }
 
@@ -147,9 +190,12 @@ namespace NebulaShell {
                 string? id = Lua.lua_tostring(L, 1);
                 if (id != null) {
                     Gtk.Widget? widget = Registry.lookup(id);
-                    if (widget != null && widget is Gtk.Label) {
-                        string label = Lua.lua_tostring(L, 2) ?? "";
-                        ((Gtk.Label) widget).set_label(label);
+                    if (widget != null) {
+                        if (widget is Gtk.Label) {
+                            ((Gtk.Label) widget).set_label(Lua.lua_tostring(L, 2) ?? "");
+                        } else if (widget is Gtk.Button) {
+                            ((Gtk.Button) widget).set_label(Lua.lua_tostring(L, 2) ?? "");
+                        }
                     }
                 }
                 return 0;
@@ -159,9 +205,14 @@ namespace NebulaShell {
                 string? id = Lua.lua_tostring(L, 1);
                 if (id != null) {
                     Gtk.Widget? widget = Registry.lookup(id);
-                    if (widget != null && widget is Gtk.Label) {
-                        Lua.lua_pushstring(L, ((Gtk.Label) widget).get_label());
-                        return 1;
+                    if (widget != null) {
+                        if (widget is Gtk.Label) {
+                            Lua.lua_pushstring(L, ((Gtk.Label) widget).get_label());
+                            return 1;
+                        } else if (widget is Gtk.Button) {
+                            Lua.lua_pushstring(L, ((Gtk.Button) widget).get_label());
+                            return 1;
+                        }
                     }
                 }
                 Lua.lua_pushstring(L, "");

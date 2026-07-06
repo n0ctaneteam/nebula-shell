@@ -21,6 +21,25 @@ int main(string[] args) {
             string[] app_args = new string[] { args[0] };
             return app.run(app_args);
 
+        case "quit":
+            string? runtime_dir = Environment.get_variable("XDG_RUNTIME_DIR");
+            if (runtime_dir == null) runtime_dir = "/tmp";
+            var pid_path = Path.build_filename(runtime_dir, "nebula-shell", "pid");
+            try {
+                string pid_str;
+                GLib.FileUtils.get_contents(pid_path, out pid_str);
+                int pid = int.parse(pid_str.strip());
+                if (pid > 0) {
+                    Posix.kill(pid, Posix.Signal.TERM);
+                    stdout.printf("Sent quit signal to NebulaShell (PID: %d)\n", pid);
+                    return 0;
+                }
+            } catch (Error e) {
+                // fall through to error
+            }
+            stderr.printf("Error: NebulaShell is not running.\n");
+            return 1;
+
         case "inspect":
             return NebulaShell.CLI.Inspector.run(command_args);
 

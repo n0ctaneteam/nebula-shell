@@ -120,8 +120,13 @@ namespace NebulaShell {
             if (style_class != null) {
                 string[] classes = style_class.split(" ");
                 foreach (var cls in classes) {
-                    if (cls.strip().length > 0)
+                    if (cls.strip().length > 0) {
                         widget.add_css_class(cls.strip());
+                    }
+                }
+                // right-section boxes should push to the right in their parent
+                if (widget is Gtk.Box && "right-section" in classes) {
+                    ((Gtk.Box) widget).set_halign(Gtk.Align.END);
                 }
             }
 

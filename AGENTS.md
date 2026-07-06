@@ -157,9 +157,12 @@ Development Workflow
 meson setup build --prefix=/usr
 meson compile -C build```
 
-**Test**
+**Test (from build dir)**
 ```bash
-./build/nebula-shell run```
+# Point to repo root so it finds widgets/configs instead of stale system files
+export NEBULA_SYSROOT=$PWD
+./build/nebula-shell run
+```
 
 **Debug**
 ```bash

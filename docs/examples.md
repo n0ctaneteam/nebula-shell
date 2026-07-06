@@ -13,6 +13,7 @@ Practical YAML + Lua examples for building widgets with NebulaShell.
 - [Example 5: events.lua with Multiple Handlers](#example-5-eventslua-with-multiple-handlers)
 - [Example 6: Workspace Switcher with Custom Styling](#example-6-workspace-switcher-with-custom-styling)
 - [Example 7: Nested Box Layout](#example-7-nested-box-layout)
+- [CLI Usage](#cli-usage)
 
 ---
 
@@ -790,3 +791,25 @@ The three `nebula/box` containers (`left`, `center`, `right`) act as flex-like s
 | `~/.config/nebula-shell/widgets/custom/` | Your custom widget modules     |
 
 System defaults are in `/etc/nebula-shell/`. User files in `~/.config/nebula-shell/` take priority.
+
+---
+
+## CLI Usage
+
+```bash
+# Run NebulaShell
+nebula-shell run
+
+# Quit a running instance
+nebula-shell quit
+
+# Inspect running widgets
+nebula-shell inspect --tree
+
+# Generate JSON Schema for YAML intellisense
+nebula-shell schema --output ~/.config/nebula-shell/nebula-shell.schema.json
+
+# Test from build directory (avoids stale system files)
+export NEBULA_SYSROOT=$PWD
+./build/nebula-shell run
+```

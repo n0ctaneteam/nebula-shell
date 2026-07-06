@@ -1,6 +1,10 @@
 namespace NebulaShell {
     public class LayerShell : Object {
-        public static void init_window(Gtk.Window window, string anchor, bool exclusive = true) {
+        public static bool init_window(Gtk.Window window, string anchor, bool exclusive = true) {
+            if (!GtkLayerShell.is_supported()) {
+                Logger.warning("Layer Shell protocol not supported by compositor. Widgets will not use layer-shell.");
+                return false;
+            }
             GtkLayerShell.init_for_window(window);
             GtkLayerShell.set_namespace(window, "nebula-shell");
 
@@ -34,6 +38,7 @@ namespace NebulaShell {
             if (exclusive) {
                 GtkLayerShell.auto_exclusive_zone_enable(window);
             }
+            return true;
         }
 
         public static void set_exclusive(Gtk.Window window, bool enable) {

@@ -52,6 +52,13 @@ namespace NebulaShell {
                 Logger.warning(@"NEBULA_CONFIG path not found: $(env_path)");
             }
 
+            string? sysroot = Environment.get_variable("NEBULA_SYSROOT");
+            if (sysroot != null) {
+                string dev_path = Path.build_filename(sysroot, "etc", "nebula-shell", "config.yaml");
+                var dev_file = File.new_for_path(dev_path);
+                if (dev_file.query_exists()) return dev_path;
+            }
+
             string user_path = Path.build_filename(
                 Environment.get_user_config_dir(),
                 "nebula-shell",

@@ -48,6 +48,7 @@ namespace NebulaShell {
             export_dbus_interface();
             save_pid();
 
+            this.hold();
             Logger.info("NebulaShell started successfully");
         }
 
@@ -127,6 +128,7 @@ namespace NebulaShell {
             Logger.info("NebulaShell shutting down...");
             Registry.cleanup();
             cleanup_ipc();
+            this.release();
             base.shutdown();
         }
 

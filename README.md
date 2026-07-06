@@ -47,8 +47,15 @@ nebula-shell run
 # Run with custom config
 nebula-shell run ~/.config/nebula-shell/config.yaml
 
+# Quit a running instance
+nebula-shell quit
+
 # Debug mode
 GTK_DEBUG=interactive nebula-shell run
+
+# Test from build directory (uses repo files instead of stale system install)
+export NEBULA_SYSROOT=$PWD
+./build/nebula-shell run
 ```
 
 ## Configuration
@@ -147,6 +154,7 @@ nebula-shell schema --output ~/.config/nebula-shell/nebula-shell.schema.json
 
 ```bash
 nebula-shell run [config.yaml]         # Run with default or custom config
+nebula-shell quit                      # Quit a running instance
 nebula-shell inspect [options]         # Inspect running widgets
 nebula-shell schema [options]          # Generate JSON Schema
 nebula-shell help                      # Show help

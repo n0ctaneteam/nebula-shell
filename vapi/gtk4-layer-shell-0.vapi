@@ -24,6 +24,9 @@ namespace GtkLayerShell {
         OVERLAY
     }
 
+    [CCode (cname = "gtk_layer_is_supported")]
+    public bool is_supported();
+
     [CCode (cname = "gtk_layer_init_for_window")]
     public void init_for_window(Gtk.Window window);
 

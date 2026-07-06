@@ -134,7 +134,9 @@ namespace NebulaShell {
                 string? anchor = get_lua_field_string("anchor");
                 if (anchor != null) {
                     bool use_exclusive = get_lua_field_bool("visible");
-                    LayerShell.init_window((Gtk.Window) widget, anchor, use_exclusive);
+                    if (!LayerShell.init_window((Gtk.Window) widget, anchor, use_exclusive)) {
+                        Logger.warning(@"Widget '$(id)': LayerShell not available, falling back to normal window");
+                    }
                 }
             }
 

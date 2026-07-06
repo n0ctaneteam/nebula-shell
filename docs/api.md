@@ -64,26 +64,27 @@ end
 - **Returns**: boolean — `true` if visible, `false` otherwise.
 
 #### `widget_set_label(id, label)`
-Set the text of a `Gtk.Label` widget. Only works on widgets backed by a `Gtk.Label` (or a `Gtk.Button`, which contains a label internally).
+Set the text of a `Gtk.Label` or `Gtk.Button` widget.
 
 ```lua
 widget_set_label("system_clock", os.date("%H:%M:%S"))
+widget_set_label("toggle_panel_btn", "\u{2715}")
 ```
 
 - **`id`** (string) — Widget identifier.
 - **`label`** (string) — The new label text.
 - **Returns**: nothing.
-- **Fails silently** if the widget is not a `Gtk.Label`.
+- **Fails silently** if the widget is neither a `Gtk.Label` nor a `Gtk.Button`.
 
 #### `widget_get_label(id)`
-Get the current text of a `Gtk.Label` widget.
+Get the current text of a `Gtk.Label` or `Gtk.Button` widget.
 
 ```lua
 local current = widget_get_label("system_clock")
 ```
 
 - **`id`** (string) — Widget identifier.
-- **Returns**: string — the current label text, or `""` if the widget is not a `Gtk.Label`.
+- **Returns**: string — the current label text, or `""` if the widget is neither a `Gtk.Label` nor a `Gtk.Button`.
 
 #### `widget_set_fraction(id, fraction)`
 Set the progress fraction of a `Gtk.ProgressBar` widget. Value should be between `0.0` and `1.0`.
@@ -235,7 +236,7 @@ function M.update(config)
 end
 ```
 
-The framework currently invokes the timer but does **not** automatically call `M.update`. Timer-based widgets (like `nebula/clock` and `nebula/cpu`) manage their own update loop internally. This function is reserved for future framework-level timer dispatch.
+If `M.update` is defined, the framework calls it on every timer tick. If it is not defined, the timer tick is a no-op. This allows widgets like `nebula/clock` and `nebula/cpu` to drive their own refresh logic while letting `widget_builder.vala` handle the timing.
 
 ### `M.destroy(config)` (optional)
 Called during application shutdown to perform cleanup. Use it to stop timers, close file handles, or release resources.
@@ -318,6 +319,20 @@ function toggle_panel_visibility(source_widget_id)
     -- source_widget_id is the string ID of the clicked widget
 end
 ```
+
+For programmatic widgets (e.g., workspace buttons created entirely in Lua), the `_on_click` field stores a Lua closure directly. The framework checks for this closure at click time via the `_nebula_widget_configs[id]._on_click` lookup:
+
+```lua
+-- In a widget module's M.create():
+local btn = {
+    _type = "button",
+    _on_click = function(source_id)
+        M.switch_to_workspace(ws_id)
+    end
+}
+```
+
+The framework tries `on_click` (string lookup) first, then falls back to `_on_click` (closure dispatch).
 
 ---
 

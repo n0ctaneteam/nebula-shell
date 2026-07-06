@@ -1,13 +1,9 @@
 [Desktop Entry]
+Name=NebulaShell
+Comment=Lightweight Wayland Widget Framework
+Exec=nebula-shell run
 Type=Application
-Name=Nebula Shell
-GenericName=Desktop Shell
-Comment=Fast, lightweight desktop shell framework for Wayland
-Exec=/usr/bin/nebula-shell run
 Icon=nebula-shell
+Categories=System;Utility;
 Terminal=false
-Categories=System;
-OnlyShowIn=Hyprland;sway;river;wlroots;
-NoDisplay=false
-ConditionEnvironment=WAYLAND_DISPLAY
-X-GNOME-Autostart-enabled=true
+StartupNotify=false

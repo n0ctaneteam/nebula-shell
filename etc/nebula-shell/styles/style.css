@@ -1,0 +1,124 @@
+/* /etc/nebula-shell/styles/style.css */
+/* Default styles for NebulaShell */
+
+.bar {
+    background: rgba(30, 30, 30, 0.95);
+    color: #ffffff;
+    padding: 4px 8px;
+    border-bottom: 1px solid #444444;
+}
+
+.clock {
+    font-family: "Monospace", monospace;
+    font-size: 14px;
+    font-weight: bold;
+    color: #ffffff;
+    padding: 2px 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+}
+
+.clock:hover {
+    background: rgba(82, 148, 226, 0.3);
+}
+
+.cpu-bar {
+    min-height: 16px;
+    min-width: 60px;
+    background: #2d2d2d;
+    border-radius: 3px;
+}
+
+.cpu-bar trough {
+    background: #404040;
+    border-radius: 3px;
+}
+
+.cpu-bar progress {
+    background: linear-gradient(to right, #00ff00, #ffcc00, #ff0000);
+    border-radius: 3px;
+}
+
+.cpu-bar.warning progress {
+    background: #ffcc00;
+}
+
+.cpu-bar.critical progress {
+    background: #ff0000;
+}
+
+.workspaces {
+    padding: 2px 4px;
+}
+
+.workspace-btn {
+    background: #3d3d3d;
+    color: #888888;
+    border: none;
+    border-radius: 3px;
+    padding: 2px 8px;
+    margin: 0 2px;
+}
+
+.workspace-btn:hover {
+    background: #5294e2;
+    color: #ffffff;
+}
+
+.workspace-btn.active {
+    background: #5294e2;
+    color: #ffffff;
+}
+
+.panel-toggle-btn {
+    background: transparent;
+    color: #ffffff;
+    border: none;
+    font-size: 18px;
+    padding: 2px 6px;
+}
+
+.panel-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.panel {
+    background: rgba(20, 20, 30, 0.95);
+    border-top: 1px solid #444444;
+    padding: 10px;
+}
+
+.panel-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #ffffff;
+    padding: 8px;
+}
+
+.panel-close-btn {
+    background: #cc3333;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 12px;
+}
+
+.panel-close-btn:hover {
+    background: #ff4444;
+}
+
+.panel-separator {
+    background: #444444;
+    min-height: 1px;
+}
+
+.separator {
+    background: #444444;
+    min-width: 1px;
+    margin: 2px 4px;
+}
+
+.right-section {
+    margin-left: auto;
+}

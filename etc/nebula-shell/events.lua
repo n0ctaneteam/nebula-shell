@@ -1,0 +1,41 @@
+-- /etc/nebula-shell/events.lua
+-- Global event handlers for NebulaShell
+
+-- Toggle panel visibility
+function toggle_panel_visibility(source_widget)
+    local is_visible = widget_get_visible("main_panel")
+    widget_set_visible("main_panel", not is_visible)
+
+    local toggle_btn = get_widget_by_id("toggle_panel_btn")
+    if toggle_btn then
+        if not is_visible then
+            widget_set_label("toggle_panel_btn", "\u2715")
+        else
+            widget_set_label("toggle_panel_btn", "\u2630")
+        end
+    end
+
+    log_info("Panel visibility toggled: " .. tostring(not is_visible))
+end
+
+-- Toggle clock format
+function toggle_clock_format(source_widget)
+    local format = widget_get_label("system_clock")
+    if format:find(":") then
+        widget_set_label("system_clock", os.date("%I:%M %p"))
+    else
+        widget_set_label("system_clock", os.date("%H:%M:%S"))
+    end
+    log_info("Clock format toggled")
+end
+
+-- Show about dialog
+function show_about_dialog(source_widget)
+    log_info("NebulaShell v0.1.0 - Lightweight Wayland Widget Framework")
+    log_info("License: Apache 2.0 - Owner: N0ctaneTeam")
+end
+
+-- Reload config
+function reload_config(source_widget)
+    log_info("Config reload requested (not yet implemented)")
+end

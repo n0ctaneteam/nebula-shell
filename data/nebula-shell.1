@@ -1,0 +1,118 @@
+.TH NEBULA-SHELL 1 "July 2026" "0.1.0" "NebulaShell Manual"
+.SH NAME
+nebula-shell \- Lightweight Wayland Widget Framework
+.SH SYNOPSIS
+.B nebula-shell
+[\fIcommand\fR] [\fIoptions\fR]
+.SH DESCRIPTION
+NebulaShell is a lightweight, modular Wayland widget framework for Hyprland
+and other wlroots-based compositors. It combines a fast Vala/GTK4 core
+with Lua scripting and YAML configuration.
+.SH COMMANDS
+.TP
+\fBrun\fR [\fIconfig.yaml\fR]
+Run NebulaShell. Uses default config if no path given.
+.TP
+\fBinspect\fR [\fIoptions\fR]
+Connect to a running NebulaShell instance via D-Bus and display widget info.
+.TP
+\fBschema\fR [\fIoptions\fR]
+Generate JSON Schema for YAML editor intellisense.
+.TP
+\fBhelp\fR
+Show help message with usage and examples.
+.TP
+\fBversion\fR
+Show version information.
+.SH INSPECT OPTIONS
+.TP
+\fB--id\fR \fI<id>\fR
+Show widget by unique identifier.
+.TP
+\fB--class\fR \fI<class>\fR
+Show widgets matching a CSS class.
+.TP
+\fB--type\fR \fI<type>\fR
+Show widgets by GTK type (e.g. GtkBox, GtkLabel, GtkButton).
+.TP
+\fB--tree\fR
+Show full GTK widget tree hierarchy.
+.TP
+\fB--json\fR
+Output widget information in JSON format.
+.TP
+\fB--help\fR, \fB-h\fR
+Show inspect help.
+.SH SCHEMA OPTIONS
+.TP
+\fB--output\fR \fI<path>\fR
+Write schema to file instead of stdout.
+.SH FILES
+.TP
+\fI/etc/nebula-shell/config.yaml\fR
+System default configuration (read-only).
+.TP
+\fI~/.config/nebula-shell/config.yaml\fR
+User configuration (overrides system).
+.TP
+\fI/etc/nebula-shell/events.lua\fR
+System default event handlers.
+.TP
+\fI~/.config/nebula-shell/events.lua\fR
+User event handlers (overrides system).
+.TP
+\fI/etc/nebula-shell/styles/style.css\fR
+System default GTK styling.
+.TP
+\fI~/.config/nebula-shell/styles/style.css\fR
+User styling overrides.
+.TP
+\fI/etc/nebula-shell/widgets/nebula/*.lua\fR
+Built-in widget definitions.
+.TP
+\fI~/.config/nebula-shell/widgets/custom/*.lua\fR
+User custom widget definitions.
+.SH EXAMPLES
+.TP
+\fBnebula-shell run\fR
+Run with default system configuration.
+.TP
+\fBnebula-shell run ~/myconfig.yaml\fR
+Run with a custom configuration file.
+.TP
+\fBexport NEBULA_LOG=debug && nebula-shell run\fR
+Run with debug logging enabled.
+.TP
+\fBnebula-shell inspect\fR
+Show all running widgets with basic information.
+.TP
+\fBnebula-shell inspect --id main_bar\fR
+Show details for a specific widget by ID.
+.TP
+\fBnebula-shell inspect --class button --json\fR
+Show all buttons in JSON format.
+.TP
+\fBnebula-shell schema\fR
+Print JSON Schema to stdout.
+.TP
+\fBnebula-shell schema --output ~/.config/nebula-shell/schema.json\fR
+Write JSON Schema to user config directory.
+.SH ENVIRONMENT
+.TP
+\fBNEBULA_CONFIG\fR
+Path to a custom configuration file. Overrides default config resolution.
+.TP
+\fBNEBULA_LOG\fR
+Set log level: debug, info, warning, error. Default: info.
+.SH SEE ALSO
+.BR gtk4 (1),
+.BR wayland (7),
+.BR lua (1)
+.PP
+Documentation: https://n0ctaneteam.github.io/docs/nebula-shell
+.PP
+GitHub: https://github.com/n0ctaneteam/nebula-shell
+.SH LICENSE
+Apache License 2.0
+.SH AUTHOR
+N0ctaneTeam

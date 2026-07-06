@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://n0ctaneteam.github.io/schemas/nebula-shell.json",
+  "title": "NebulaShell Config",
+  "description": "JSON Schema for NebulaShell YAML widget configuration. Enables editor autocompletion and validation.",
+  "type": "object",
+  "properties": {
+    "nebula/bar": {
+      "type": "object",
+      "description": "Top or bottom bar panel",
+      "properties": {
+        "id": { "type": "string", "description": "Unique widget identifier", "default": "main_bar" },
+        "style_class": { "type": "string", "description": "CSS class for styling", "default": "bar" },
+        "anchor": { "type": "string", "description": "Screen edge to anchor to", "default": "top", "enum": ["top", "bottom"] },
+        "height": { "type": "number", "description": "Window height in pixels", "default": 32 },
+        "children": { "type": "array", "description": "Child widget definitions" }
+      },
+      "additionalProperties": false
+    },
+    "nebula/panel": {
+      "type": "object",
+      "description": "Toggleable panel window",
+      "properties": {
+        "id": { "type": "string", "description": "Unique widget identifier", "default": "main_panel" },
+        "style_class": { "type": "string", "description": "CSS class for styling", "default": "panel" },
+        "visible": { "type": "boolean", "description": "Initial visibility", "default": false },
+        "anchor": { "type": "string", "description": "Screen edge to anchor to", "default": "bottom", "enum": ["top", "bottom"] },
+        "height": { "type": "number", "description": "Window height in pixels", "default": 300 },
+        "children": { "type": "array", "description": "Child widget definitions" }
+      },
+      "additionalProperties": false
+    },
+    "nebula/clock": {
+      "type": "object",
+      "description": "Time display widget with configurable format",
+      "properties": {
+        "id": { "type": "string", "description": "Unique widget identifier" },
+        "style_class": { "type": "string", "description": "CSS class for styling", "default": "clock" },
+        "format": { "type": "string", "description": "strftime-compatible time format", "default": "%H:%M:%S" },
+        "interval": { "type": "number", "description": "Update interval in seconds", "default": 1 },
+        "on_click": { "type": "string", "description": "Event handler function name from events.lua" }
+      },
+      "additionalProperties": false
+    },
+    "nebula/cpu": {
+      "type": "object",
+      "description": "CPU usage meter with progress bar",
+      "properties": {
+        "id": { "type": "string", "description": "Unique widget identifier" },
+        "style_class": { "type": "string", "description": "CSS class for styling", "default": "cpu-bar" },
+        "update_interval": { "type": "number", "description": "Polling interval in seconds", "default": 2 },
+        "warning_threshold": { "type": "number", "description": "Warning color at percentage", "default": 70 },
+        "critical_threshold": { "type": "number", "description": "Critical color at percentage", "default": 90 }
+      },
+      "additionalProperties": false
+    },
+    "nebula/button": {
+      "type": "object",
+      "description": "Clickable button widget",
+      "properties": {
+        "id": { "type": "string", "description": "Unique widget identifier" },
+        "style_class": { "type": "string", "description": "CSS class for styling", "default": "button" },
+        "label": { "type": "string", "description": "Button label text", "default": "Button" },
+        "on_click": { "type": "string", "description": "Event handler function name from events.lua" }
+      },
+      "additionalProperties": false
+    },
+    "nebula/label": {
+      "type": "object",
+      "description": "Static text label widget",
+      "properties": {
+        "id": { "type": "string", "description": "Unique widget identifier" },
+        "style_class": { "type": "string", "description": "CSS class for styling", "default": "label" },
+        "text": { "type": "string", "description": "Label text content", "default": "" }
+      },
+      "additionalProperties": false
+    },
+    "nebula/box": {
+      "type": "object",
+      "description": "Container box for child widgets",
+      "properties": {
+        "id": { "type": "string", "description": "Unique widget identifier" },
+        "style_class": { "type": "string", "description": "CSS class for styling", "default": "box" },
+        "orientation": { "type": "string", "description": "Layout orientation", "default": "horizontal", "enum": ["horizontal", "vertical"] },
+        "spacing": { "type": "number", "description": "Spacing between children in pixels", "default": 0 },
+        "children": { "type": "array", "description": "Child widget definitions" }
+      },
+      "additionalProperties": false
+    },
+    "nebula/separator": {
+      "type": "object",
+      "description": "Visual separator line",
+      "properties": {
+        "id": { "type": "string", "description": "Unique widget identifier" },
+        "style_class": { "type": "string", "description": "CSS class for styling", "default": "separator" },
+        "orientation": { "type": "string", "description": "Separator orientation", "default": "horizontal", "enum": ["horizontal", "vertical"] }
+      },
+      "additionalProperties": false
+    },
+    "nebula/workspaces": {
+      "type": "object",
+      "description": "Hyprland workspace switcher",
+      "properties": {
+        "id": { "type": "string", "description": "Unique widget identifier" },
+        "style_class": { "type": "string", "description": "CSS class for styling", "default": "workspaces" },
+        "update_interval": { "type": "number", "description": "Polling interval in seconds", "default": 0.5 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": {
+    "type": "object",
+    "description": "Custom widget - define in ~/.config/nebula-shell/widgets/custom/"
+  }
+}

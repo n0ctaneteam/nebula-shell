@@ -1,25 +1,35 @@
-# Python
-__pycache__
-*.pyc
-*.pyo
+# Build directories
+/build/
+/build-*/
 
-# Meson build
-builddir/
-builddir2/
-builddir3/
-builddir4/
-builddir5/
-build/
-
-# IDE
+# Development
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# OS
-.DS_Store
-Thumbs.db
+# Compiled files
+*.o
+*.a
+*.so
+*.dll
+*.exe
 
-# User config (installed separately)
-*.local
+# Vala/C files
+*.c
+*.h
+
+# Config files (user-specific)
+/config.local
+
+# Documentation
+/docs/_build/
+
+# Testing
+/test-results/
+/coverage/
+
+# Distribution
+/dist/
+/packages/

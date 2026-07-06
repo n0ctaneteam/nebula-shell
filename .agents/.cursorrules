@@ -1,0 +1,84 @@
+
+---
+
+## 📄 .cursorrules (for Cursor AI)
+
+```markdown
+# .cursorrules - NebulaShell Development Rules
+
+## Project
+NebulaShell - Lightweight Wayland widget framework
+
+## Tech Stack
+- Vala (core)
+- GTK4 (UI)
+- Lua (scripting)
+- YAML (config)
+- CSS (styling)
+
+## Naming Conventions
+- `NebulaShell` - Brand, display names, documentation
+- `nebula-shell` - Executable, directories, packages
+- `nebula_shell` - Code namespaces, Lua modules, YAML types
+- `com.nebula.shell` - Gtk application ID
+
+## Code Style
+- Vala: Follow GNOME Vala style guide
+- Lua: Use snake_case for functions, PascalCase for modules
+- YAML: Use 2 spaces indentation
+- CSS: Use kebab-case for class names
+
+## Architecture Rules
+1. Core must be in Vala, never in Lua
+2. Widget definitions MUST be in Lua
+3. User config MUST be in YAML + Lua
+4. Never hardcode widget behavior in Vala
+5. All widget communication via Registry by ID
+6. Use GObject signals for GTK events
+7. User config overrides system config
+
+## Widget Development
+Every widget MUST have:
+1. `M.schema` - Property validation
+2. `M.defaults` - Default values
+3. `M.create(props, event_handlers)` - Creates widget
+4. Return type: Gtk.Widget or subclass
+5. Register with Registry if has ID
+
+## File Organization
+- `/etc/nebula-shell/` - System defaults (read-only)
+- `~/.config/nebula-shell/` - User config (writable)
+- `/usr/bin/nebula-shell` - Executable
+
+## CLI Commands
+- `nebula-shell run [config]` - Run the shell
+- `nebula-shell inspect [options]` - Inspect widgets
+- `nebula-shell help` - Show help
+
+## Inspect Options
+- `--id <id>` - Filter by widget ID
+- `--class <class>` - Filter by CSS class
+- `--type <type>` - Filter by GTK type
+- `--tree` - Show full GTK tree
+- `--json` - JSON output
+
+## Build Commands
+```bash
+meson setup build --prefix=/usr
+meson compile -C build
+sudo meson install -C build
+```
+
+### Testing
+Build before testing
+Run with: ./build/src/nebula-shell run
+
+Debug with: GTK_DEBUG=interactive ./build/src/nebula-shell run
+
+**Always Remember**
+User experience is #1
+Keep it lightweight
+Document everything
+Test on Hyprland
+Use Apache 2.0 license
+Credit N0ctaneTeam as owner

@@ -126,29 +126,20 @@ namespace NebulaShell {
             string[] anchors = parse_anchors();
             GtkLayerShell.Layer layer = parse_layer();
             string? size_mode = parse_size_mode();
+            bool widget_visible = read_visible_field();
 
-            // Apply margin to window (layer-shell) or widget (non-window)
-            if (margin_edges != null) {
-                // margin_edges is [top, bottom, left, right] in pixels
-                if (widget is Gtk.Window) {
+            if (widget is Gtk.Window) {
+                // Always init layer-shell for window widgets (even with empty anchors, e.g. "center")
+                if (!LayerShell.init_window((Gtk.Window) widget, anchors, exclusive, layer)) {
+                    Logger.warning(@"Widget '$(id)': LayerShell not available, falling back to normal window");
+                }
+
+                // Apply margin (must happen AFTER init_window for layer-shell margins to work)
+                if (margin_edges != null) {
                     GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.TOP, int.parse(margin_edges[0]));
                     GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.BOTTOM, int.parse(margin_edges[1]));
                     GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.LEFT, int.parse(margin_edges[2]));
                     GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.RIGHT, int.parse(margin_edges[3]));
-                } else {
-                    widget.set_margin_top(int.parse(margin_edges[0]));
-                    widget.set_margin_bottom(int.parse(margin_edges[1]));
-                    widget.set_margin_start(int.parse(margin_edges[2]));
-                    widget.set_margin_end(int.parse(margin_edges[3]));
-                }
-            }
-
-            if (widget is Gtk.Window) {
-                if (anchors.length > 0) {
-                    bool use_exclusive = exclusive;
-                    if (!LayerShell.init_window((Gtk.Window) widget, anchors, use_exclusive, layer)) {
-                        Logger.warning(@"Widget '$(id)': LayerShell not available, falling back to normal window");
-                    }
                 }
 
                 // Apply size
@@ -172,32 +163,34 @@ namespace NebulaShell {
 
                 // Apply padding (for windows — use margin equivalent)
                 if (padding_edges != null) {
-                    if (widget is Gtk.Window) {
-                        GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.TOP,
-                            int.parse(padding_edges[0]));
-                        GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.BOTTOM,
-                            int.parse(padding_edges[1]));
-                        GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.LEFT,
-                            int.parse(padding_edges[2]));
-                        GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.RIGHT,
-                            int.parse(padding_edges[3]));
-                    } else {
-                        widget.set_margin_top(int.parse(padding_edges[0]));
-                        widget.set_margin_bottom(int.parse(padding_edges[1]));
-                        widget.set_margin_start(int.parse(padding_edges[2]));
-                        widget.set_margin_end(int.parse(padding_edges[3]));
-                    }
+                    GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.TOP,
+                        int.parse(padding_edges[0]));
+                    GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.BOTTOM,
+                        int.parse(padding_edges[1]));
+                    GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.LEFT,
+                        int.parse(padding_edges[2]));
+                    GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.RIGHT,
+                        int.parse(padding_edges[3]));
                 }
             } else {
-                // Apply padding to non-window widgets
+                // Apply margin and padding to non-window widgets
+                if (margin_edges != null) {
+                    widget.set_margin_top(int.parse(margin_edges[0]));
+                    widget.set_margin_bottom(int.parse(margin_edges[1]));
+                    widget.set_margin_start(int.parse(margin_edges[2]));
+                    widget.set_margin_end(int.parse(margin_edges[3]));
+                }
                 if (padding_edges != null) {
-                    widget.set_margin_top(int.parse(padding_edges[0]));
-                    widget.set_margin_bottom(int.parse(padding_edges[1]));
-                    widget.set_margin_start(int.parse(padding_edges[2]));
-                    widget.set_margin_end(int.parse(padding_edges[3]));
+                    widget.set_margin_top(int.parse(padding_edges[0]) + (margin_edges != null ? int.parse(margin_edges[0]) : 0));
+                    widget.set_margin_bottom(int.parse(padding_edges[1]) + (margin_edges != null ? int.parse(margin_edges[1]) : 0));
+                    widget.set_margin_start(int.parse(padding_edges[2]) + (margin_edges != null ? int.parse(margin_edges[2]) : 0));
+                    widget.set_margin_end(int.parse(padding_edges[3]) + (margin_edges != null ? int.parse(margin_edges[3]) : 0));
                 }
             }
             // --- end container properties ---
+
+            // Apply initial visibility from config
+            widget.set_visible(widget_visible);
 
             if (timer_enabled && timer_interval > 0) {
                 setup_timer(id, timer_interval);
@@ -316,7 +309,7 @@ namespace NebulaShell {
         // --- Container property helpers ---
 
         private string[] parse_anchors() {
-            // Try array first: anchor: [top, bottom]
+            // Try Lua table first: anchor = { "top", "bottom" }
             lua_bridge.get_field(-1, "anchor");
             if (lua_bridge.is_table(-1)) {
                 var list = new List<string>();
@@ -330,7 +323,7 @@ namespace NebulaShell {
                 lua_bridge.pop();
                 string[] res = {};
                 foreach (var a in list) {
-                    if (a == "center") {
+                    if (a.down() == "center") {
                         // Center alone — return empty array (no anchors)
                         return {};
                     }
@@ -338,10 +331,24 @@ namespace NebulaShell {
                 }
                 return res;
             }
-            // Try string: anchor: top
+            // Try string: "top", "center", or YAML inline list "[top]" / "[top, bottom]"
             string? anchor_str = lua_bridge.get_string(-1);
             lua_bridge.pop();
             if (anchor_str != null && anchor_str.length > 0) {
+                // Handle YAML inline list: [top] or [top, bottom]
+                if (anchor_str.has_prefix("[") && anchor_str.has_suffix("]")) {
+                    string inner = anchor_str.substring(1, anchor_str.length - 2);
+                    string[] parts = inner.split(",");
+                    string[] res = {};
+                    foreach (var part in parts) {
+                        string trimmed = part.strip();
+                        if (trimmed.length > 0) {
+                            if (trimmed.down() == "center") return {};
+                            res += trimmed;
+                        }
+                    }
+                    return res;
+                }
                 if (anchor_str.down() == "center") return {};
                 return { anchor_str };
             }
@@ -628,6 +635,14 @@ namespace NebulaShell {
             bool? val = lua_bridge.get_boolean(-1);
             lua_bridge.pop();
             return val ?? false;
+        }
+
+        private bool read_visible_field() {
+            // Default to true if not specified or not a boolean
+            lua_bridge.get_field(-1, "visible");
+            bool? val = lua_bridge.get_boolean(-1);
+            lua_bridge.pop();
+            return val ?? true;
         }
     }
 }

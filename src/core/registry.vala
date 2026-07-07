@@ -61,12 +61,11 @@ namespace NebulaShell {
 
         public static void show_all() {
             foreach (var widget in widget_list) {
-                if (widget is Gtk.Window) {
-                    var win = (Gtk.Window) widget;
-                    win.present();
-                } else {
+                if (!(widget is Gtk.Window)) {
                     widget.set_visible(true);
                 }
+                // Windows manage their own initial visibility via the `visible` config field
+                // (handled in WidgetBuilder.create_widget_from_lua())
             }
             Logger.info("All widgets shown");
         }

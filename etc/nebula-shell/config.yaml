@@ -83,7 +83,7 @@ nebula/popup:
   style_class: "popup"
   anchor: center
   size: {w: 400, h: 300}
-  visible: true
+  visible: false
   children:
     - nebula/box:
         id: popup_content

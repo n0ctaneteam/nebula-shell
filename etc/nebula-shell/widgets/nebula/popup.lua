@@ -19,7 +19,7 @@ M.defaults = {
     anchor = "center",
     exclusive = false,
     size = "auto",
-    overlay = { intensity = 4 }
+    overlay = { intensity = 8 }
 }
 
 function M.create(props, event_handlers)

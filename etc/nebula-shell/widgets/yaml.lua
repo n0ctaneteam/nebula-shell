@@ -185,13 +185,46 @@ function yaml.parse_value(val)
     end
 
     if val:sub(1, 1) == '"' and val:sub(-1) == '"' then
-        return val:sub(2, -2)
+        local s = val:sub(2, -2)
+        s = yaml.unescape_unicode(s)
+        return s
     end
     if val:sub(1, 1) == "'" and val:sub(-1) == "'" then
         return val:sub(2, -2)
     end
 
     return val
+end
+
+-- Unicode code point to UTF-8 (works in Lua 5.2, 5.3, 5.4)
+local function utf8_char(cp)
+    if utf8 and utf8.char then
+        return utf8.char(cp)
+    end
+    -- Lua 5.2 fallback: manual UTF-8 encoding
+    if cp < 0x80 then
+        return string.char(cp)
+    elseif cp < 0x800 then
+        return string.char(0xC0 + (cp >> 6), 0x80 + (cp & 0x3F))
+    elseif cp < 0x10000 then
+        return string.char(0xE0 + (cp >> 12), 0x80 + ((cp >> 6) & 0x3F), 0x80 + (cp & 0x3F))
+    elseif cp < 0x110000 then
+        return string.char(0xF0 + (cp >> 18), 0x80 + ((cp >> 12) & 0x3F), 0x80 + ((cp >> 6) & 0x3F), 0x80 + (cp & 0x3F))
+    end
+    return "?"
+end
+
+function yaml.unescape_unicode(s)
+    -- \u{XXXXXX} (YAML 1.2 style)
+    -- Note: braces are literal in Lua patterns, no escaping needed
+    s = s:gsub("\\u{([0-9a-fA-F]+)}", function(hex)
+        return utf8_char(tonumber(hex, 16))
+    end)
+    -- \uXXXX (YAML 1.1 4-digit style)
+    s = s:gsub("\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])", function(hex)
+        return utf8_char(tonumber(hex, 16))
+    end)
+    return s
 end
 
 function yaml.parse_kv(str)

@@ -12,7 +12,15 @@ namespace NebulaShell {
             );
         }
 
+        private static bool already_activated = false;
+
         protected override void activate() {
+            if (already_activated) {
+                Logger.warning("Ignoring duplicate activate() call");
+                return;
+            }
+            already_activated = true;
+
             Logger.info("NebulaShell starting...");
 
             var display = Gdk.Display.get_default();

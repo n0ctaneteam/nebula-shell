@@ -3,7 +3,7 @@
 
 -- Toggle panel visibility
 function toggle_panel_visibility(source_widget)
-    local panel_id = source_widget or "main_panel"
+    local panel_id = "main_panel"
     local is_visible = widget_get_visible(panel_id)
     widget_set_visible(panel_id, not is_visible)
 

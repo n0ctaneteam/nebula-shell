@@ -5,6 +5,10 @@ M.schema = {
     style_class = { type = "string", default = "box" },
     orientation = { type = "string", default = "horizontal", enum = {"horizontal", "vertical"} },
     spacing = { type = "number", default = 0 },
+    anchor = { type = "any" },
+    exclusive = { type = "boolean" },
+    margin = { type = "table" },
+    padding = { type = "table" },
     children = { type = "array", default = {} }
 }
 

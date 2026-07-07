@@ -74,7 +74,8 @@ export NEBULA_SYSROOT=$PWD
 nebula/bar:
   id: main_bar
   style_class: "bar"
-  anchor: top
+  anchor: [top]
+  exclusive: true
   children:
     - nebula/clock:
         id: system_clock
@@ -90,7 +91,7 @@ nebula/panel:
   id: main_panel
   style_class: "panel"
   visible: false
-  anchor: bottom
+  anchor: [bottom]
   height: 300
   children:
     - nebula/label:
@@ -100,6 +101,34 @@ nebula/panel:
         id: close_btn
         label: "Close"
         on_click: "toggle_panel_visibility"
+```
+
+### Front-end properties
+
+In addition to `anchor`, `visible`, and `height`, NebulaShell supports these container properties:
+
+| Property    | Type            | Default          | Description                                    |
+|-------------|-----------------|------------------|------------------------------------------------|
+| `exclusive` | boolean         | varies by widget | Reserve space on the layer-shell edge          |
+| `anchor`    | string or array | varies           | Edge(s): `"top"`, `["top", "bottom"]`, `"center"` |
+| `margin`    | table           | (none)           | Edge distances: `{all: 4}`, `{top: 2, horizontal: 4}` |
+| `padding`   | table           | (none)           | Inner padding (same format as `margin`)        |
+| `size`      | string or table | `"auto"`         | Window size: `"auto"`, `{w: 400, h: 300}`, `"fill"` |
+| `overlay`   | table           | `{intensity: 4}` | Popup backdrop opacity (1-10)                  |
+
+### Anchor format
+
+The `anchor` field accepts both string and array formats:
+
+```yaml
+# Single edge (backward compatible)
+anchor: top
+
+# Multiple edges
+anchor: [top, bottom, left, right]
+
+# Center — no anchors (compositor manages placement)
+anchor: center
 ```
 
 ### Event handlers
@@ -150,6 +179,68 @@ Generate the full schema:
 nebula-shell schema --output ~/.config/nebula-shell/nebula-shell.schema.json
 ```
 
+## CSS Styling
+
+NebulaShell uses standard GTK4 CSS for widget styling. Place your CSS in `styles/style.css`:
+
+### CSS file resolution
+
+| Priority | Path                                    |
+|----------|-----------------------------------------|
+| 1 (dev)  | `$NEBULA_SYSROOT/etc/nebula-shell/styles/style.css` |
+| 2 (user) | `~/.config/nebula-shell/styles/style.css`           |
+| 3 (sys)  | `/etc/nebula-shell/styles/style.css`                 |
+
+### Example CSS
+
+```css
+/* Style by class (from style_class property) */
+.bar {
+    background: rgba(30, 30, 30, 0.95);
+    color: #ffffff;
+    padding: 4px 8px;
+}
+
+/* Hover effects */
+.workspace-btn:hover {
+    background: #5294e2;
+    color: #ffffff;
+}
+
+/* Dynamic classes (toggled at runtime via Lua) */
+.workspace-btn.active {
+    background: #5294e2;
+}
+
+/* Progress bar theming */
+.cpu-bar trough {
+    background: #404040;
+    border-radius: 3px;
+}
+
+.cpu-bar progress {
+    background: linear-gradient(to right, #00ff00, #ffcc00, #ff0000);
+}
+
+/* Popup styling */
+.popup {
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.popup-overlay {
+    background: rgba(0, 0, 0, 0.4);
+}
+```
+
+Use the Lua API to add/remove CSS classes at runtime:
+```lua
+widget_add_css_class("cpu_meter", "warning")
+widget_remove_css_class("cpu_meter", "warning")
+```
+
+Refer to the [CSS Styling Examples](docs/examples.md#css-styling-reference) for more patterns.
+
 ## CLI Reference
 
 ```bash
@@ -179,15 +270,16 @@ nebula-shell version                   # Show version
 
 ## Built-in Widgets
 
-| Widget | Description | Properties |
-|--------|-------------|------------|
-| `nebula/bar` | Top/bottom bar | `id`, `style_class`, `anchor`, `height`, `children` |
-| `nebula/panel` | Toggleable panel | `id`, `style_class`, `visible`, `anchor`, `height`, `children` |
+| Widget | Description | Key Properties |
+|--------|-------------|----------------|
+| `nebula/bar` | Top/bottom bar | `id`, `style_class`, `anchor`, `exclusive`, `height`, `children` |
+| `nebula/panel` | Toggleable panel | `id`, `style_class`, `visible`, `anchor`, `exclusive`, `height`, `children` |
+| `nebula/popup` | Centered popup with backdrop | `id`, `style_class`, `anchor`, `size`, `overlay`, `margin`, `children` |
 | `nebula/clock` | Time display | `id`, `style_class`, `format`, `interval`, `on_click` |
 | `nebula/cpu` | CPU usage meter | `id`, `style_class`, `update_interval`, `warning_threshold`, `critical_threshold` |
 | `nebula/button` | Clickable button | `id`, `style_class`, `label`, `on_click` |
 | `nebula/label` | Text label | `id`, `style_class`, `text` |
-| `nebula/box` | Container | `id`, `style_class`, `orientation`, `spacing`, `children` |
+| `nebula/box` | Container | `id`, `style_class`, `orientation`, `spacing`, `margin`, `padding`, `children` |
 | `nebula/separator` | Visual separator | `id`, `style_class`, `orientation` |
 | `nebula/workspaces` | Hyprland workspace switcher | `id`, `style_class`, `update_interval` |
 
@@ -236,6 +328,16 @@ custom/my-widget:
   id: my_custom_widget
   style_class: "custom"
 ```
+
+## YAML Unicode Support
+
+NebulaShell supports Unicode escapes in YAML double-quoted strings:
+
+| Format      | Example                 | Result |
+|-------------|-------------------------|--------|
+| `\u{HEX}`   | `\u{2715}`              | ✕      |
+| `\u{1F600}` | `\u{1F600}`             | 😀     |
+| `\uHEX`     | `\u2630`                | ☰      |
 
 ## Project Architecture
 

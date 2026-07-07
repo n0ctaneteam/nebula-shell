@@ -178,7 +178,7 @@ Supported schema fields per property:
 
 | Field      | Type    | Description                                |
 |------------|---------|--------------------------------------------|
-| `type`     | string  | Expected type: `"string"`, `"number"`, `"boolean"`, `"array"` |
+| `type`     | string  | Expected type: `"string"`, `"number"`, `"boolean"`, `"array"`, `"table"`, `"any"` |
 | `default`  | any     | Default value if not provided              |
 | `required` | boolean | Whether the property must be provided      |
 | `enum`     | table   | List of allowed string values              |
@@ -286,29 +286,78 @@ The config table is the central data structure that flows from YAML through Lua 
 | `_window_type`      | string  | window                 | `"bar"` or `"panel"` (for LayerShell config)      |
 | `_value`            | number  | progress_bar           | Current progress value (0.0–1.0)                  |
 | `_workspace_buttons`| table   | workspaces             | Internal list of workspace button configs         |
+| `_layer`            | string  | window                 | LayerShell layer: `"background"`, `"bottom"`, `"top"` (default), `"overlay"` |
+| `_has_overlay`      | boolean | window (popup)         | Create a backdrop window beneath the popup        |
 
 ### User-Facing Fields (from YAML)
 
 These are the properties users set in `config.yaml`. Widget modules map them to internal fields during `M.create()`.
 
-| Field          | Type    | Widgets               | Description                                |
-|----------------|---------|-----------------------|--------------------------------------------|
-| `id`           | string  | All                   | Unique widget identifier                   |
-| `style_class`  | string  | All                   | CSS class(es) (space-separated)            |
-| `anchor`       | string  | bar, panel            | `"top"` or `"bottom"`                      |
-| `height`       | number  | bar, panel            | Window height in pixels                    |
-| `visible`      | boolean | panel                 | Initial visibility (`false` = hidden)      |
-| `label`        | string  | button                | Button label text                          |
-| `text`         | string  | label                 | Label text                                 |
-| `on_click`     | string  | button, clock         | Name of an event handler function in `events.lua` |
-| `format`       | string  | clock                 | `os.date()` format string                  |
-| `interval`     | number  | clock                 | Update interval in seconds                 |
-| `update_interval`| number| cpu, workspaces       | Update interval in seconds                 |
-| `orientation`  | string  | box, separator        | `"horizontal"` or `"vertical"`             |
-| `spacing`      | number  | box                   | Pixel spacing between children             |
-| `children`     | array   | bar, panel, box       | Nested widget definitions                  |
-| `warning_threshold`| number| cpu                 | CPU % to trigger warning CSS class         |
-| `critical_threshold`| number| cpu               | CPU % to trigger critical CSS class        |
+| Field               | Type            | Widgets                     | Description                                     |
+|---------------------|-----------------|-----------------------------|-------------------------------------------------|
+| `id`                | string          | All                         | Unique widget identifier                        |
+| `style_class`       | string          | All                         | CSS class(es) (space-separated)                 |
+| `anchor`            | string or array | bar, panel, popup           | Edge(s) to anchor: string `"top"` or array `["top", "bottom"]`; `"center"`=no anchors |
+| `height`            | number          | bar, panel                  | Window height in pixels                         |
+| `visible`           | boolean         | panel, popup                | Initial visibility (`false` = hidden)           |
+| `exclusive`         | boolean         | bar, panel, popup, box      | Reserve space on the layer-shell edge (default varies by widget) |
+| `margin`            | table           | All windows and box         | Edge distances: `{all: 4}`, `{top: 2, horizontal: 4}`, etc. (last-wins per axis) |
+| `padding`           | table           | All windows and box         | Inner padding (same format as `margin`)         |
+| `size`              | string or table | popup                       | `"auto"` (fit content), `{w: 400, h: 300}`, or `"fill"` (anchor all edges) |
+| `overlay`           | table           | popup                       | Backdrop overlay config: `{intensity: 4}` (1-10) |
+| `label`             | string          | button                      | Button label text                               |
+| `text`              | string          | label                       | Label text                                      |
+| `on_click`          | string          | button, clock               | Name of an event handler function in `events.lua` |
+| `format`            | string          | clock                       | `os.date()` format string                       |
+| `interval`          | number          | clock                       | Update interval in seconds                      |
+| `update_interval`   | number          | cpu, workspaces             | Update interval in seconds                      |
+| `orientation`       | string          | box, separator              | `"horizontal"` or `"vertical"`                  |
+| `spacing`           | number          | box                         | Pixel spacing between children                  |
+| `children`          | array           | bar, panel, popup, box      | Nested widget definitions                       |
+| `warning_threshold` | number          | cpu                         | CPU % to trigger warning CSS class              |
+| `critical_threshold`| number          | cpu                         | CPU % to trigger critical CSS class             |
+
+#### Margin / Padding Resolution
+
+The `margin` and `padding` tables support these keys (last-wins per axis):
+
+```yaml
+margin:
+  all: 8            # all four edges
+  vertical: 4       # overrides top/bottom
+  horizontal: 12    # overrides left/right
+  top: 2            # overrides vertical/all for top edge
+  bottom: 2         # overrides vertical/all for bottom edge
+  left: 6           # overrides horizontal/all for left edge
+  right: 6          # overrides horizontal/all for right edge
+```
+
+Resolution order (later keys override earlier ones):
+1. `all` → sets top, bottom, left, right
+2. `vertical` → overrides top, bottom
+3. `horizontal` → overrides left, right
+4. `top`, `bottom`, `left`, `right` → override any previous value for that edge
+
+For window widgets, `margin` controls distance from the layer-shell edge (via `GtkLayerShell.set_margin`).
+For non-window widgets (boxes, buttons, etc.), margin controls the CSS margin via GTK4 widget properties.
+
+#### Anchor Options
+
+The `anchor` field accepts either a single string or an array of strings:
+
+```yaml
+# Single edge (backward compatible)
+anchor: top
+
+# Multiple edges
+anchor: [top, bottom, left, right]
+
+# Center — no anchors applied (compositor manages placement)
+anchor: center
+```
+
+Valid edge values: `"top"`, `"bottom"`, `"left"`, `"right"`.
+When `"center"` is present in the array, no anchors are applied at all.
 
 ### Click Handler Resolution
 
@@ -392,14 +441,14 @@ The `_type` field in a config table determines which GTK widget is created:
 
 | `_type`         | GTK Class        | Key Fields                    |
 |-----------------|------------------|-------------------------------|
-| `"window"`      | `Gtk.Window`     | `anchor`, `height`, `_orientation`, `_spacing`, `_children` |
+| `"window"`      | `Gtk.Window`     | `anchor`, `exclusive`, `_layer`, `height`, `size`, `_orientation`, `_spacing`, `_children` |
 | `"label"`       | `Gtk.Label`      | `_text`                       |
 | `"button"`      | `Gtk.Button`     | `_text`, `on_click`           |
-| `"box"`         | `Gtk.Box`        | `_orientation`, `_spacing`, `_children` |
+| `"box"`         | `Gtk.Box`        | `_orientation`, `_spacing`, `_children`, `margin`, `padding` |
 | `"separator"`   | `Gtk.Separator`  | `_orientation`                |
 | `"progress_bar"`| `Gtk.ProgressBar`| `_text`, `_value`             |
 
-When `_type` is `"window"`, the WidgetBuilder additionally applies LayerShell settings via the `anchor` field, making the window a proper Wayland layer-surface (bar or panel).
+When `_type` is `"window"`, the WidgetBuilder additionally applies LayerShell settings via the `anchor`, `_layer`, and `exclusive` fields, making the window a proper Wayland layer-surface (bar, panel, or popup).
 
 ---
 
@@ -427,6 +476,7 @@ This means `require("nebula/clock")` resolves to either:
 |--------------------|----------------|--------------------------------------|
 | `nebula/bar`       | window (bar)   | Top/bottom anchored bar              |
 | `nebula/panel`     | window (panel) | Toggleable overlay panel             |
+| `nebula/popup`     | window (popup) | Centered popup with backdrop overlay |
 | `nebula/clock`     | label          | Time display with auto-update        |
 | `nebula/cpu`       | progress_bar   | CPU usage meter with color thresholds|
 | `nebula/button`    | button         | Clickable button                     |
@@ -434,6 +484,104 @@ This means `require("nebula/clock")` resolves to either:
 | `nebula/box`       | box            | Horizontal or vertical container     |
 | `nebula/separator` | separator      | Visual divider line                  |
 | `nebula/workspaces`| box            | Hyprland workspace switcher          |
+
+---
+
+## CSS Styling
+
+NebulaShell uses GTK4 CSS for widget styling. All CSS is loaded from the `styles/style.css` file, with user files taking priority over system defaults.
+
+### CSS File Location
+
+| Priority | Path                                    |
+|----------|-----------------------------------------|
+| 1 (dev)  | `$NEBULA_SYSROOT/etc/nebula-shell/styles/style.css` |
+| 2 (user) | `~/.config/nebula-shell/styles/style.css`           |
+| 3 (sys)  | `/etc/nebula-shell/styles/style.css`                 |
+
+### CSS Selectors
+
+All widgets use the `style_class` property (mapped to GTK CSS classes):
+
+```css
+/* Style a bar by its class */
+.bar {
+    background: rgba(30, 30, 30, 0.95);
+    color: #ffffff;
+    padding: 4px 8px;
+}
+
+/* Style a specific clock widget by class */
+.clock {
+    font-family: monospace;
+    font-size: 14px;
+    color: #ffffff;
+}
+
+/* Dynamic classes — added/removed at runtime */
+.cpu-bar.warning progress {
+    background: #ffcc00;
+}
+
+.cpu-bar.critical progress {
+    background: #ff0000;
+}
+
+/* Popup widget styling */
+.popup {
+    background: rgba(30, 30, 40, 0.97);
+    border: 1px solid #555555;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+/* Popup backdrop overlay */
+.popup-overlay {
+    background: rgba(0, 0, 0, 0.4);
+}
+
+/* Hover states for interactive widgets */
+.workspace-btn:hover {
+    background: #5294e2;
+    color: #ffffff;
+}
+
+/* Active/selected states */
+.workspace-btn.active {
+    background: #5294e2;
+    color: #ffffff;
+}
+```
+
+### Manipulating CSS at Runtime
+
+Use the `widget_add_css_class()` and `widget_remove_css_class()` Lua functions to toggle CSS classes dynamically:
+
+```lua
+-- In events.lua or M.update():
+widget_add_css_class("cpu_meter", "warning")
+widget_remove_css_class("cpu_meter", "warning")
+```
+
+---
+
+## YAML Unicode Escapes
+
+NebulaShell's YAML parser supports Unicode escape sequences in double-quoted strings:
+
+| Format      | Example                 | Result   |
+|-------------|-------------------------|----------|
+| `\u{HEX}`   | `\u{2715}`              | ✕        |
+| `\u{1F600}` | `\u{1F600}`             | 😀       |
+| `\uHEX`     | `\u2630`                | ☰        |
+
+This works in all YAML string values, including widget properties:
+
+```yaml
+nebula/button:
+  id: toggle_btn
+  label: "\u{2630}"
+```
 
 ---
 
@@ -463,6 +611,12 @@ YAML config.yaml
        │     ├─ create_gtk_widget(id, config._type)
        │     ├─ Applies CSS classes
        │     ├─ Initializes LayerShell (if window)
+       │     │   ├─ anchors (string or array)
+       │     │   ├─ exclusive zone
+       │     │   ├─ layer (top/overlay/background)
+       │     │   └─ margin (edge distances)
+       │     ├─ Applies size (auto / explicit / fill)
+       │     ├─ Creates popup backdrop overlay (if _has_overlay)
        │     ├─ Sets up timers (if _timer_enabled)
        │     ├─ Wires click handlers (if on_click)
        │     └─ Builds children recursively (if _children)

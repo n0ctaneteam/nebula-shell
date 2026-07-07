@@ -273,7 +273,6 @@ namespace NebulaShell {
                 len++;
                 Lua.lua_pop(L, 1);
             }
-            Lua.lua_pop(L, 1);
             return len;
         }
 

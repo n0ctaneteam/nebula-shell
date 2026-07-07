@@ -2,24 +2,31 @@ local M = {}
 
 M.schema = {
     id = { type = "string", required = true },
-    style_class = { type = "string", default = "bar" },
-    anchor = { type = "any", default = "top" },
-    exclusive = { type = "boolean", default = true },
-    height = { type = "number", default = 32 },
+    style_class = { type = "string", default = "popup" },
+    visible = { type = "boolean", default = true },
+    anchor = { type = "any", default = "center" },
+    exclusive = { type = "boolean", default = false },
+    size = { type = "any", default = "auto" },
+    overlay = { type = "table" },
+    margin = { type = "table" },
+    padding = { type = "table" },
     children = { type = "array", default = {} }
 }
 
 M.defaults = {
-    style_class = "bar",
-    anchor = "top",
-    exclusive = true,
-    height = 32
+    style_class = "popup",
+    visible = true,
+    anchor = "center",
+    exclusive = false,
+    size = "auto",
+    overlay = { intensity = 4 }
 }
 
 function M.create(props, event_handlers)
     local config = M.merge_defaults(props)
     config._type = "window"
-    config._window_type = "bar"
+    config._layer = "overlay"
+    config._has_overlay = true
     config._children = config.children or {}
 
     if config.id then
@@ -30,7 +37,7 @@ function M.create(props, event_handlers)
 end
 
 function M.destroy(config)
-    log_info("Bar destroyed: " .. (config.id or "unknown"))
+    log_info("Popup destroyed: " .. (config.id or "unknown"))
 end
 
 function M.merge_defaults(props)

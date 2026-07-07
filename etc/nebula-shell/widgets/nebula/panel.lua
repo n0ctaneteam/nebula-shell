@@ -4,7 +4,8 @@ M.schema = {
     id = { type = "string", required = true },
     style_class = { type = "string", default = "panel" },
     visible = { type = "boolean", default = false },
-    anchor = { type = "string", default = "bottom", enum = {"top", "bottom"} },
+    anchor = { type = "any", default = "bottom" },
+    exclusive = { type = "boolean", default = false },
     height = { type = "number", default = 300 },
     children = { type = "array", default = {} }
 }
@@ -12,7 +13,8 @@ M.schema = {
 M.defaults = {
     style_class = "panel",
     visible = false,
-    anchor = "bottom",
+    anchor = { "bottom" },
+    exclusive = false,
     height = 300
 }
 

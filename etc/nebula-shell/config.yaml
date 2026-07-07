@@ -3,7 +3,7 @@
 nebula/bar:
   id: main_bar
   style_class: "bar"
-  anchor: top
+  anchor: [top]
   children:
     - nebula/workspaces:
         id: workspaces
@@ -28,7 +28,7 @@ nebula/bar:
 
           - nebula/button:
               id: toggle_panel_btn
-              label: "\u2630"
+              label: \u{2715}
               style_class: "panel-toggle-btn"
               on_click: "toggle_panel_visibility"
 
@@ -36,7 +36,8 @@ nebula/panel:
   id: main_panel
   style_class: "panel"
   visible: false
-  anchor: bottom
+  anchor: [bottom]
+  exclusive: true
   height: 300
   children:
     - nebula/box:
@@ -76,3 +77,43 @@ nebula/panel:
                     label: "Reload Config"
                     style_class: "panel-reload-btn"
                     on_click: "reload_config"
+
+nebula/popup:
+  id: demo_popup
+  style_class: "popup"
+  anchor: center
+  size: {w: 400, h: 300}
+  visible: true
+  children:
+    - nebula/box:
+        id: popup_content
+        orientation: vertical
+        spacing: 8
+        children:
+          - nebula/box:
+              id: popup_header
+              orientation: horizontal
+              spacing: 0
+              children:
+                - nebula/label:
+                    id: popup_title
+                    text: "Popup Demo"
+                    style_class: "popup-title"
+
+                - nebula/box:
+                    id: popup_header_spacer
+                    orientation: horizontal
+
+                - nebula/button:
+                    id: popup_close_btn
+                    label: "\u{2715}"
+                    style_class: "popup-close-btn"
+
+          - nebula/separator:
+              id: popup_sep
+              style_class: "popup-separator"
+
+          - nebula/label:
+              id: popup_body
+              text: "This is a demo popup widget.\n\nPopups appear on the OVERLAY layer with\na backdrop beneath them on the TOP layer."
+              style_class: "popup-content"

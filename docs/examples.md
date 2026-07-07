@@ -13,6 +13,8 @@ Practical YAML + Lua examples for building widgets with NebulaShell.
 - [Example 5: events.lua with Multiple Handlers](#example-5-eventslua-with-multiple-handlers)
 - [Example 6: Workspace Switcher with Custom Styling](#example-6-workspace-switcher-with-custom-styling)
 - [Example 7: Nested Box Layout](#example-7-nested-box-layout)
+- [Example 8: Popup Widget](#example-8-popup-widget)
+- [CSS Styling Reference](#css-styling-reference)
 - [CLI Usage](#cli-usage)
 
 ---
@@ -28,7 +30,8 @@ A minimal top bar with a clock on the right and a CPU meter next to it.
 nebula/bar:
   id: main_bar
   style_class: "bar"
-  anchor: top
+  anchor: [top]
+  exclusive: true
   children:
     - nebula/clock:
         id: system_clock
@@ -64,10 +67,11 @@ end
 ### What happens
 
 1. The bar is created as a `Gtk.Window` anchored to the top edge via Wayland Layer Shell.
-2. The clock is a `Gtk.Label` that updates every second via its internal timer.
-3. The CPU meter is a `Gtk.ProgressBar` that reads `/proc/stat` every 2 seconds.
-4. Clicking the clock toggles between 24-hour and 12-hour formats.
-5. The CPU meter automatically adds/removes the CSS classes `"warning"` or `"critical"` based on the configured thresholds.
+2. `exclusive: true` reserves the top edge space so other windows don't occlude the bar.
+3. The clock is a `Gtk.Label` that updates every second via its internal timer.
+4. The CPU meter is a `Gtk.ProgressBar` that reads `/proc/stat` every 2 seconds.
+5. Clicking the clock toggles between 24-hour and 12-hour formats.
+6. The CPU meter automatically adds/removes the CSS classes `"warning"` or `"critical"` based on the configured thresholds.
 
 ---
 
@@ -84,7 +88,7 @@ A panel that starts hidden and can be toggled visible/invisible by clicking a bu
 nebula/bar:
   id: main_bar
   style_class: "bar"
-  anchor: top
+  anchor: [top]
   children:
     - nebula/button:
         id: toggle_panel_btn
@@ -108,7 +112,8 @@ nebula/panel:
   id: main_panel
   style_class: "panel"
   visible: false                   # Starts hidden
-  anchor: bottom
+  anchor: [bottom]
+  exclusive: false                 # Don't reserve edge space
   height: 300
   children:
     - nebula/label:
@@ -183,6 +188,7 @@ end
 - The toggle button's label changes between a hamburger and close icon to indicate state.
 - Both the bar button and the panel's "Close Panel" button call the same handler.
 - The panel is a `Gtk.Window` anchored to the bottom with a fixed height of 300px.
+- `exclusive: false` on the panel means it does not reserve edge space — it covers content.
 
 ---
 
@@ -274,7 +280,7 @@ return M
 nebula/bar:
   id: main_bar
   style_class: "bar"
-  anchor: top
+  anchor: [top]
   children:
     - custom/greeting:
         id: hello_widget
@@ -310,7 +316,10 @@ A comprehensive configuration demonstrating all built-in widget types and featur
 nebula/bar:
   id: main_bar
   style_class: "bar"
-  anchor: top
+  anchor: [top]
+  exclusive: true
+  margin:
+    horizontal: 4
   children:
     # Left section: workspaces
     - nebula/workspaces:
@@ -360,87 +369,40 @@ nebula/bar:
               style_class: "panel-toggle-btn"
               on_click: "toggle_panel_visibility"
 
-# ── Toggleable Panel ─────────────────────────────────
-nebula/panel:
-  id: main_panel
-  style_class: "panel"
+# ── Popup Demo ───────────────────────────────────────
+nebula/popup:
+  id: demo_popup
+  style_class: "popup"
+  anchor: center
+  size: {w: 400, h: 300}
   visible: false
-  anchor: bottom
-  height: 350
+  overlay:
+    intensity: 4
   children:
-    - nebula/label:
-        id: panel_title
-        style_class: "panel-title"
-        text: "NebulaShell Control Panel"
-
-    - nebula/separator:
-        id: panel_sep_1
-        style_class: "panel-separator"
-        orientation: horizontal
-
     - nebula/box:
-        id: panel_content
-        style_class: "panel-content"
+        id: popup_content
         orientation: vertical
         spacing: 8
         children:
-          - nebula/box:
-              id: row_info
-              style_class: "panel-row"
-              orientation: horizontal
-              spacing: 12
-              children:
-                - nebula/label:
-                    id: lbl_cpu_label
-                    text: "CPU:"
-                    style_class: "panel-label"
+          - nebula/label:
+              id: popup_title
+              text: "Popup Demo"
+              style_class: "popup-title"
 
-                - nebula/cpu:
-                    id: panel_cpu_meter
-                    style_class: "cpu-bar detailed"
-                    update_interval: 1
-                    warning_threshold: 60
-                    critical_threshold: 85
+          - nebula/button:
+              id: popup_close_btn
+              label: "\u{2715}"
+              style_class: "popup-close-btn"
+              on_click: "close_demo_popup"
 
-          - nebula/box:
-              id: row_actions
-              style_class: "panel-row"
-              orientation: horizontal
-              spacing: 8
-              children:
-                - nebula/button:
-                    id: btn_close_panel
-                    label: "Close"
-                    style_class: "panel-btn"
-                    on_click: "toggle_panel_visibility"
+          - nebula/separator:
+              id: popup_sep
+              style_class: "popup-separator"
 
-                - nebula/button:
-                    id: btn_toggle_clock
-                    label: "Toggle 12/24h"
-                    style_class: "panel-btn"
-                    on_click: "toggle_clock_format"
-
-                - nebula/button:
-                    id: btn_about
-                    label: "About"
-                    style_class: "panel-btn"
-                    on_click: "show_about_dialog"
-
-                - nebula/button:
-                    id: btn_reload
-                    label: "Reload"
-                    style_class: "panel-btn"
-                    on_click: "reload_config"
-
-    - nebula/separator:
-        id: panel_sep_2
-        style_class: "panel-separator"
-        orientation: horizontal
-
-    - nebula/label:
-        id: panel_footer
-        style_class: "panel-footer"
-        text: "NebulaShell v0.1.0 — Apache 2.0"
+          - nebula/label:
+              id: popup_body
+              text: "This popup appears on the OVERLAY layer."
+              style_class: "popup-content"
 ```
 
 ---
@@ -566,6 +528,17 @@ end
 --- Runs once when events.lua is first loaded.
 --- Use this for one-time setup, validation, or logging.
 log_info("events.lua loaded successfully — " .. os.date("%Y-%m-%d %H:%M:%S"))
+
+-- ============================================================
+-- Popup Demo
+-- ============================================================
+
+--- Close the demo popup.
+--- @param source_widget string  The ID of the widget that triggered this handler.
+function close_demo_popup(source_widget)
+    widget_set_visible("demo_popup", false)
+    log_info("Popup closed")
+end
 ```
 
 ---
@@ -580,7 +553,8 @@ Integrate the workspace switcher widget with CSS styling for active/inactive sta
 nebula/bar:
   id: main_bar
   style_class: "bar"
-  anchor: top
+  anchor: [top]
+  exclusive: true
   children:
     - nebula/workspaces:
         id: workspaces
@@ -709,6 +683,47 @@ nebula/bar:
     background: rgba(255, 255, 255, 0.1);
     margin: 2px 4px;
 }
+
+/* Popup widget */
+.popup {
+    background: rgba(30, 30, 40, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.popup-overlay {
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.popup-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #e5e5e5;
+    padding: 4px 8px;
+}
+
+.popup-close-btn {
+    padding: 4px 12px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #abb2bf;
+}
+
+.popup-close-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.popup-content {
+    padding: 8px;
+    color: #abb2bf;
+}
+
+.popup-separator {
+    background: rgba(255, 255, 255, 0.08);
+    min-height: 1px;
+    margin: 6px 0;
+}
 ```
 
 ---
@@ -723,7 +738,7 @@ Build a complex layout using nested `nebula/box` containers.
 nebula/bar:
   id: main_bar
   style_class: "bar"
-  anchor: top
+  anchor: [top]
   children:
     # Outer container: left, center, right sections
     - nebula/box:
@@ -778,6 +793,170 @@ nebula/bar:
 ```
 
 The three `nebula/box` containers (`left`, `center`, `right`) act as flex-like sections within the bar. The center section expands naturally because the left and right sections only occupy their content width.
+
+---
+
+## Example 8: Popup Widget
+
+A centered popup widget with a semi-transparent backdrop overlay.
+
+### config.yaml
+
+```yaml
+nebula/popup:
+  id: info_popup
+  style_class: "popup"
+  anchor: center
+  size: {w: 480, h: 320}
+  visible: true
+  overlay:
+    intensity: 5
+  margin:
+    all: 16
+  padding:
+    all: 8
+  children:
+    - nebula/box:
+        id: popup_root
+        orientation: vertical
+        spacing: 10
+        children:
+          - nebula/box:
+              id: popup_header
+              orientation: horizontal
+              spacing: 0
+              children:
+                - nebula/label:
+                    id: popup_title
+                    text: "Information"
+                    style_class: "popup-title"
+
+                - nebula/box:
+                    id: header_spacer
+                    orientation: horizontal
+
+                - nebula/button:
+                    id: close_btn
+                    label: "\u{2715}"
+                    style_class: "popup-close-btn"
+                    on_click: "close_info_popup"
+
+          - nebula/separator:
+              id: header_sep
+              style_class: "popup-separator"
+
+          - nebula/box:
+              id: popup_body
+              orientation: horizontal
+              spacing: 8
+              style_class: "popup-content"
+              children:
+                - nebula/label:
+                    id: body_text
+                    text: "This popup has:\n- A backdrop overlay (intensity 5)\n- 16px margin from screen edges\n- 8px inner padding\n- A close button in the header\n- Explicit size (480x320)"
+```
+
+### events.lua
+
+```lua
+function close_info_popup(source_widget)
+    widget_set_visible("info_popup", false)
+    log_info("Info popup closed")
+end
+```
+
+### What it does
+
+1. Creates a window on the `OVERLAY` layer (topmost layer, above all other windows).
+2. Creates a backdrop window on the `TOP` layer that covers the full screen.
+3. The backdrop has `intensity: 5` which translates to 50% opacity black overlay.
+4. The popup has 16px margin from screen edges and 8px inner padding.
+
+---
+
+## CSS Styling Reference
+
+### Where CSS files go
+
+| Priority | Path                                    |
+|----------|-----------------------------------------|
+| 1 (dev)  | `$NEBULA_SYSROOT/etc/nebula-shell/styles/style.css` |
+| 2 (user) | `~/.config/nebula-shell/styles/style.css`           |
+| 3 (sys)  | `/etc/nebula-shell/styles/style.css`                 |
+
+### CSS class naming
+
+Use the `style_class` property in YAML to apply CSS classes to any widget:
+
+```yaml
+nebula/label:
+  id: my_label
+  style_class: "my-label emphasized"
+```
+
+```css
+.my-label {
+    color: #ffffff;
+    font-size: 14px;
+}
+
+.my-label.emphasized {
+    font-weight: bold;
+    color: #61afef;
+}
+```
+
+### Dynamic CSS class manipulation
+
+Use the Lua API to add/remove classes at runtime:
+
+```lua
+-- Add a CSS class
+widget_add_css_class("cpu_meter", "warning")
+
+-- Remove a CSS class
+widget_remove_css_class("cpu_meter", "warning")
+```
+
+### Common CSS patterns
+
+**Hover effects on buttons:**
+```css
+.my-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 4px 12px;
+}
+
+.my-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+```
+
+**Progress bar theming:**
+```css
+.my-progress-bar {
+    min-width: 100px;
+    min-height: 16px;
+}
+
+.my-progress-bar trough {
+    background: #404040;
+    border-radius: 4px;
+}
+
+.my-progress-bar progress {
+    background: #98c379;
+    border-radius: 4px;
+}
+```
+
+**Popup backdrop:**
+```css
+.popup-overlay {
+    background: rgba(0, 0, 0, 0.4);
+}
+```
 
 ---
 

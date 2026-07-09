@@ -7,6 +7,7 @@ M.schema = {
     anchor = { type = "any", default = "bottom" },
     exclusive = { type = "boolean", default = false },
     height = { type = "number", default = 300 },
+    size = { type = "any", default = "auto" },
     children = { type = "array", default = {} }
 }
 
@@ -15,13 +16,17 @@ M.defaults = {
     visible = false,
     anchor = { "bottom" },
     exclusive = false,
-    height = 300
+    height = 300,
+    size = "auto"
 }
 
 function M.create(props, event_handlers)
     local config = M.merge_defaults(props)
     config._type = "window"
     config._window_type = "panel"
+    config._layer = config.layer or "top"
+    config._orientation = config.orientation or "horizontal"
+    config._spacing = config.spacing or 0
     config._children = config.children or {}
 
     if config.id then

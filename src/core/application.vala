@@ -3,6 +3,7 @@ namespace NebulaShell {
         private LuaBridge lua_bridge;
         private ConfigLoader config_loader;
         private WidgetBuilder widget_builder;
+        private static WidgetBuilder? dialog_builder = null;
         private CssManager css_manager;
 
         public Application() {
@@ -45,16 +46,19 @@ namespace NebulaShell {
             config_loader.load_widget_events();
             Logger.info("Events loaded, building widgets...");
 
-            widget_builder = new WidgetBuilder(lua_bridge);
-            widget_builder.build_from_config();
-
             css_manager = new CssManager();
             css_manager.load();
+
+            widget_builder = new WidgetBuilder(lua_bridge);
+            dialog_builder = widget_builder;
+            widget_builder.build_from_config();
+            register_dialog_functions();
 
             Registry.show_all();
 
             export_dbus_interface();
             save_pid();
+            setup_toggle_handler();
 
             this.hold();
             Logger.info("NebulaShell started successfully");
@@ -85,6 +89,34 @@ namespace NebulaShell {
                 Logger.info("PID saved");
             } catch (Error e) {
                 Logger.warning(@"Failed to save PID: $(e.message)");
+            }
+        }
+
+        private void setup_toggle_handler() {
+            try {
+                GLib.Unix.signal_add((int) Posix.Signal.USR1, () => {
+                    string toggle_file = Path.build_filename(get_ipc_dir(), "toggle");
+                    try {
+                        string content;
+                        GLib.FileUtils.get_contents(toggle_file, out content);
+                        GLib.FileUtils.remove(toggle_file);
+                        string widget_id = content.strip();
+                        if (widget_id.length > 0) {
+                            var widget = Registry.lookup(widget_id);
+                            if (widget != null) {
+                                widget.set_visible(!widget.get_visible());
+                                Logger.info(@"Toggled widget: $(widget_id)");
+                            } else {
+                                Logger.warning(@"Toggle: widget not found: $(widget_id)");
+                            }
+                        }
+                    } catch (Error e) {
+                        Logger.warning(@"Toggle IPC error: $(e.message)");
+                    }
+                    return true;
+                });
+            } catch (GLib.Error e) {
+                Logger.warning(@"Failed to set up toggle handler: $(e.message)");
             }
         }
 
@@ -138,6 +170,51 @@ namespace NebulaShell {
             cleanup_ipc();
             this.release();
             base.shutdown();
+        }
+
+        private void register_dialog_functions() {
+            lua_bridge.register_function("show_dialog", (L) => {
+                string? id = Lua.lua_tostring(L, 1);
+                if (id != null && dialog_builder != null) {
+                    Gtk.Widget? dialog = dialog_builder.build_dialog_from_config("nebula/dialog", id);
+                    dialog.set_visible(true);
+                }
+                return 0;
+            });
+
+            lua_bridge.register_function("toggle_dialog", (L) => {
+                string? id = Lua.lua_tostring(L, 1);
+                if (id != null && dialog_builder != null) {
+                    var widget = Registry.lookup(id);
+                    if (widget != null) {
+                        Registry.remove(id);
+                        Lua.lua_getglobal(L, "_nebula_widget_configs");
+                        if (Lua.lua_type(L, -1) == Lua.TTABLE) {
+                            Lua.lua_pushnil(L);
+                            Lua.lua_setfield(L, -2, id);
+                        }
+                        Lua.lua_pop(L, 1);
+                    } else {
+                        Gtk.Widget? dialog = dialog_builder.build_dialog_from_config("nebula/dialog", id);
+                        dialog.set_visible(true);
+                    }
+                }
+                return 0;
+            });
+
+            lua_bridge.register_function("destroy_dialog", (L) => {
+                string? id = Lua.lua_tostring(L, 1);
+                if (id != null) {
+                    Registry.remove(id);
+                    Lua.lua_getglobal(L, "_nebula_widget_configs");
+                    if (Lua.lua_type(L, -1) == Lua.TTABLE) {
+                        Lua.lua_pushnil(L);
+                        Lua.lua_setfield(L, -2, id);
+                    }
+                    Lua.lua_pop(L, 1);
+                }
+                return 0;
+            });
         }
 
         private void register_lua_functions() {
@@ -272,6 +349,29 @@ namespace NebulaShell {
                     if (widget != null) {
                         string cls = Lua.lua_tostring(L, 2) ?? "";
                         widget.remove_css_class(cls);
+                    }
+                }
+                return 0;
+            });
+
+            lua_bridge.register_function("widget_set_parent", (L) => {
+                string? id = Lua.lua_tostring(L, 1);
+                void* parent_ptr = Lua.lua_touserdata(L, 2);
+                if (id != null && parent_ptr != null) {
+                    Gtk.Widget? widget = Registry.lookup(id);
+                    if (widget != null) {
+                        widget.set_parent((Gtk.Widget) parent_ptr);
+                    }
+                }
+                return 0;
+            });
+
+            lua_bridge.register_function("popup_widget", (L) => {
+                string? id = Lua.lua_tostring(L, 1);
+                if (id != null) {
+                    Gtk.Widget? widget = Registry.lookup(id);
+                    if (widget != null && widget is Gtk.Popover) {
+                        ((Gtk.Popover) widget).popup();
                     }
                 }
                 return 0;

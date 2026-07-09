@@ -14,6 +14,7 @@ M.defaults = {
 function M.create(props, event_handlers)
     local config = M.merge_defaults(props)
     config._type = "label"
+    config._text = config.text
 
     if config.id then
         register_widget(config.id, config)

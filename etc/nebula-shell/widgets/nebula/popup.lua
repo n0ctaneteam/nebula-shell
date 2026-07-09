@@ -3,11 +3,12 @@ local M = {}
 M.schema = {
     id = { type = "string", required = true },
     style_class = { type = "string", default = "popup" },
-    visible = { type = "boolean", default = true },
-    anchor = { type = "any", default = "center" },
-    exclusive = { type = "boolean", default = false },
+    visible = { type = "boolean", default = false },
     size = { type = "any", default = "auto" },
-    overlay = { type = "table" },
+    orientation = { type = "string", default = "horizontal", enum = {"horizontal", "vertical"} },
+    spacing = { type = "number", default = 0 },
+    autohide = { type = "number", default = 0 },
+    showPointer = { type = "boolean", default = false },
     margin = { type = "table" },
     padding = { type = "table" },
     children = { type = "array", default = {} }
@@ -15,18 +16,19 @@ M.schema = {
 
 M.defaults = {
     style_class = "popup",
-    visible = true,
-    anchor = "center",
-    exclusive = false,
+    visible = false,
+    autohide = 0,
+    showPointer = false,
     size = "auto",
-    overlay = { intensity = 8 }
+    orientation = "horizontal",
+    spacing = 0
 }
 
 function M.create(props, event_handlers)
     local config = M.merge_defaults(props)
-    config._type = "window"
-    config._layer = "overlay"
-    config._has_overlay = true
+    config._type = "popover"
+    config._orientation = config.orientation
+    config._spacing = config.spacing
     config._children = config.children or {}
 
     if config.id then
@@ -36,8 +38,22 @@ function M.create(props, event_handlers)
     return config
 end
 
+function M.show(config, parent_id)
+    local parent = get_widget_by_id(parent_id)
+    if parent == nil then
+        log_error("Popup show: parent widget not found: " .. parent_id)
+        return
+    end
+    widget_set_parent(config.id, parent)
+    popup_widget(config.id)
+end
+
+function M.hide(config)
+    widget_set_visible(config.id, false)
+end
+
 function M.destroy(config)
-    log_info("Popup destroyed: " .. (config.id or "unknown"))
+    log_info("Popover destroyed: " .. (config.id or "unknown"))
 end
 
 function M.merge_defaults(props)

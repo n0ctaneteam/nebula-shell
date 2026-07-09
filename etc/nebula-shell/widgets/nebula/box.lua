@@ -15,12 +15,16 @@ M.schema = {
 M.defaults = {
     style_class = "box",
     orientation = "horizontal",
-    spacing = 0
+    spacing = 0,
+    margin = { all = 0 },
+    padding = {all = 0}
 }
 
 function M.create(props, event_handlers)
     local config = M.merge_defaults(props)
     config._type = "box"
+    config._orientation = config.orientation
+    config._spacing = config.spacing
     config._children = config.children or {}
 
     if config.id then

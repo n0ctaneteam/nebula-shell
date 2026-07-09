@@ -70,14 +70,18 @@ NebulaShell follows a **three-layer design**:
 ### Data Flow
 
 ```
-config.yaml  ──►  ConfigLoader  ──►  _nebula_config  ──►  WidgetBuilder
-                                │                           │
-                          events.lua                Lua widget modules
-                          (global funcs)             (M.create, etc.)
-                                                      │
-                                                      ▼
-                                                GTK Widgets
-                                                (Registry)
+config.yaml  ──►  ConfigLoader  ──►  _nebula_config  ──►  CssManager
+                                 │                           (CSS loaded first)
+                           events.lua                          │
+                           (global funcs)                      ▼
+                                                         WidgetBuilder
+                                                           │
+                                                    Lua widget modules
+                                                    (M.create, etc.)
+                                                           │
+                                                           ▼
+                                                     GTK Widgets
+                                                     (Registry)
 ```
 
 ---
@@ -179,6 +183,8 @@ nebula-shell/
 │       ├── nebula/               # Built-in widgets
 │       │   ├── bar.lua
 │       │   ├── panel.lua
+│       │   ├── dialog.lua
+│       │   ├── popup.lua
 │       │   ├── clock.lua
 │       │   ├── cpu.lua
 │       │   ├── button.lua
@@ -188,6 +194,7 @@ nebula-shell/
 │       │   └── workspaces.lua
 │       └── custom/               # User custom widgets (created by user)
 ├── data/                         # Application data files
+├── docs/                         # Documentation
 ├── meson.build
 ├── makefile
 └── README.md
@@ -323,6 +330,7 @@ end
 6. **Use `M.merge_defaults()`** pattern consistently in widget modules.
 7. **Call `register_widget()`** in `M.create()` after setting all fields.
 8. **Stop timers in `M.destroy()`** by setting `config._timer_enabled = false`.
+9. **For popover-style widgets**, provide `M.show()` and `M.hide()` functions that use `widget_set_parent()` and `popup_widget()`.
 
 ---
 
@@ -356,10 +364,11 @@ private void register_lua_functions() {
 - Widget manipulation functions should follow the pattern `widget_<action>_<property>`.
 - Logging functions use the `log_` prefix.
 - Registration/lookup functions use verb forms.
+- Popover-related functions: `widget_set_parent` and `popup_widget`.
 
 **Parameter conventions:**
 - First parameter: widget ID (string)
-- Second parameter: value to set
+- Second parameter: value to set (or light userdata pointer for `widget_set_parent`)
 - Return values: push onto the Lua stack with `lua_push*` functions
 
 ### Step 2: Document the Function
@@ -375,6 +384,13 @@ Add the function to `docs/api.md` under the appropriate section, including:
 ```lua
 -- In events.lua or a widget module
 widget_set_opacity("main_panel", 0.85)
+
+-- For popup/popover widgets:
+local parent = get_widget_by_id("menu_btn")
+if parent then
+    widget_set_parent("quick_menu", parent)
+    popup_widget("quick_menu")
+end
 ```
 
 ### Registration Pattern Reference
@@ -401,6 +417,14 @@ lua_bridge.register_function("widget_<property>", (L) => {
     }
     Lua.lua_pushnil(L);  // fallback
     return 1;
+});
+
+// Light userdata setter pattern (e.g., widget_set_parent)
+lua_bridge.register_function("widget_set_parent", (L) => {
+    string? id = Lua.lua_tostring(L, 1);
+    void* ptr = Lua.lua_touserdata(L, 2);   // arg 2: light userdata pointer
+    // ...
+    return 0;
 });
 ```
 
@@ -492,15 +516,37 @@ The `_type` field in your config table maps to a GTK widget:
 | `"box"`          | `Gtk.Box`           | `_orientation`, `_spacing`, `_children` |
 | `"separator"`    | `Gtk.Separator`     | `_orientation`              |
 | `"progress_bar"` | `Gtk.ProgressBar`   | `_text`, `_value`           |
-| `"window"`       | `Gtk.Window`        | `anchor`, `height`, `_orientation`, `_spacing`, `_children` |
+| `"window"`       | `Gtk.Window`        | `anchor`, `exclusive`, `_layer`, `height`, `size`, `_orientation`, `_spacing`, `_children` |
+| `"dialog"`       | `Gtk.Window`        | `_layer` (overlay), `size`, `blockInput`, `shadow`, `_children` |
+| `"popover"`      | `Gtk.Popover`       | `autohide`, `showPointer`, `_orientation`, `_spacing`, `_children` |
 
 If you need a GTK widget type not currently supported, you must also add a new case in `WidgetBuilder.create_gtk_widget()` in `src/core/widget_builder.vala`.
 
-### Step 4: Add the Widget to the YAML Schema
+### Step 4: For Popover-Based Widgets, Implement show/hide
+
+If your widget uses `_type = "popover"`, provide `M.show()` and `M.hide()` convenience functions:
+
+```lua
+function M.show(config, parent_id)
+    local parent = get_widget_by_id(parent_id)
+    if parent == nil then
+        log_error("Parent widget not found: " .. parent_id)
+        return
+    end
+    widget_set_parent(config.id, parent)
+    popup_widget(config.id)
+end
+
+function M.hide(config)
+    widget_set_visible(config.id, false)
+end
+```
+
+### Step 5: Add the Widget to the YAML Schema
 
 If you maintain the JSON Schema, add the new widget type definition. This step is optional but recommended for editor intellisense.
 
-### Step 5: Use the Widget in config.yaml
+### Step 6: Use the Widget in config.yaml
 
 ```yaml
 nebula/my_widget:
@@ -595,6 +641,8 @@ lua5.4 -e '
 | Widget type error               | `_type` field is missing or misspelled      |
 | Config not loading              | YAML syntax error or missing `yaml.lua` parser |
 | Segmentation fault              | Null pointer passed to GTK — check Registry.lookup() returns non-null |
+| Popup doesn't show              | `widget_set_parent()` must be called before `popup_widget()` |
+| Dialog appears behind bar       | Dialog needs `_layer = "overlay"` to render above other surfaces |
 
 ---
 
@@ -636,6 +684,7 @@ Before submitting, ensure:
 - [ ] Code follows the [Vala](#vala-code-style) and [Lua](#lua-code-style) style guidelines
 - [ ] New Lua functions are registered in `application.vala`
 - [ ] New widget types follow the widget protocol
+- [ ] For popover widgets: `M.show()` and `M.hide()` are implemented using `widget_set_parent()` and `popup_widget()`
 - [ ] Documentation is updated (`docs/api.md`, `docs/examples.md`)
 - [ ] `events.lua` examples are updated if event patterns changed
 - [ ] No hardcoded paths — use `FileUtils` helpers instead

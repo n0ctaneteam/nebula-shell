@@ -132,6 +132,77 @@ widget_remove_css_class("cpu_meter", "warning")
 - **`class`** (string) — CSS class name to remove.
 - **Returns**: nothing.
 
+#### `widget_set_parent(widget_id, parent_widget)`
+Sets the parent GTK widget of a popup or other widget. The `parent_widget` must be a light userdata pointer obtained via `get_widget_by_id()`.
+
+```lua
+local parent = get_widget_by_id("menu_btn")
+if parent then
+    widget_set_parent("quick_menu", parent)
+end
+```
+
+- **`widget_id`** (string) — Widget identifier of the child widget (typically a `Gtk.Popover`).
+- **`parent_widget`** (light userdata) — Pointer to the parent GTK widget, obtained from `get_widget_by_id()`.
+- **Returns**: nothing.
+- **Fails silently** if the widget ID is not found or the parent pointer is nil.
+
+> **Note:** This is the low-level counterpart to `M.show()` in `popup.lua`. You normally call `popup_widget()` after setting the parent to display the popup.
+
+#### `popup_widget(id)`
+Calls `Gtk.Popover.popup()` on the widget, making it visible and positioned relative to its parent. The widget must be a `Gtk.Popover` and must have a parent set (via `widget_set_parent()` or GTK parent assignment).
+
+```lua
+popup_widget("quick_menu")
+```
+
+- **`id`** (string) — Widget identifier. Must resolve to a `Gtk.Popover`.
+- **Returns**: nothing.
+- **Fails silently** if the widget is not found or is not a `Gtk.Popover`.
+
+#### `show_dialog(id)`
+Builds and shows a dialog widget from YAML config. The dialog is created on-demand — it does not need to exist at startup.
+
+```lua
+show_dialog("about_dialog")
+```
+
+- **`id`** (string) — Widget identifier of the dialog.
+- **Returns**: nothing.
+- **Fails silently** if the YAML config for `nebula/dialog` cannot be found or the widget fails to build.
+
+The function performs these steps:
+
+1. Reads `_nebula_config["nebula/dialog"]` (the YAML config tree).
+2. Loads the Lua module and calls `M.create(props)`.
+3. Stores the config in `_nebula_widget_configs`.
+4. Builds the GTK widget and registers it in the Registry.
+5. Shows the widget.
+
+#### `destroy_dialog(id)`
+Fully destroys a dialog widget. This calls `Gtk.Widget.destroy()` on the underlying GTK window, removes the widget from the registry via `Registry.remove()`, and cleans up the internal `_nebula_widget_configs[id]` entry. The dialog can be re-created on the next call to `show_dialog(id)`.
+
+```lua
+destroy_dialog("about_dialog")
+```
+
+- **`id`** (string) — Widget identifier of the dialog to destroy.
+- **Returns**: nothing.
+- **Fails silently** if the widget ID is not found.
+
+#### `toggle_dialog(id)`
+
+Toggles a dialog's lifecycle. If a dialog with the given `id` exists in the registry, it is destroyed. If not, it is built from the YAML config and shown.
+
+```lua
+toggle_dialog("demo_dialog")
+```
+
+- **`id`** (string) — Widget identifier of the dialog to toggle.
+- **Returns**: nothing.
+
+> `toggle_dialog` is the recommended function for dialog-launch buttons — it handles both opening and closing from a single call. Internally it delegates to `show_dialog(id)` or `destroy_dialog(id)` as needed.
+
 ---
 
 ### Logging
@@ -221,7 +292,7 @@ end
 **Returns:** A config table (see [Config Table](#config-table-fields) below).
 
 The returned config table tells the WidgetBuilder:
-- **`_type`** — Which GTK widget to create (`"window"`, `"label"`, `"button"`, `"box"`, `"separator"`, or `"progress_bar"`)
+- **`_type`** — Which GTK widget to create (see [GTK Widget Type Mapping](#gtk-widget-type-mapping))
 - **Special fields** starting with `_` — Internal directives consumed by the builder (see below)
 - **All other fields** — Passed through and available for the widget's own logic
 
@@ -272,22 +343,24 @@ The config table is the central data structure that flows from YAML through Lua 
 
 ### Internal Fields (consumed by WidgetBuilder)
 
-| Field               | Type    | Applies To             | Description                                      |
-|---------------------|---------|------------------------|--------------------------------------------------|
-| `_type`             | string  | All                    | GTK widget type: `"window"`, `"label"`, `"button"`, `"box"`, `"separator"`, `"progress_bar"` |
-| `_text`             | string  | label, button          | The text content (set from `label` or `text` prop) |
-| `_timer_enabled`    | boolean | All                    | Enable periodic timer updates                     |
-| `_timer_interval`   | number  | All (if timer enabled) | Timer interval in seconds (float)                 |
-| `_children`         | table   | window, box            | Array of child config tables                      |
-| `_format`           | string  | clock                  | `os.date()` format string for time display        |
-| `_orientation`      | string  | box, separator, window | `"horizontal"` or `"vertical"`                    |
-| `_spacing`          | number  | box, window            | Pixel spacing between children                    |
-| `_on_click`         | function| button                 | Lua function to call on button click              |
-| `_window_type`      | string  | window                 | `"bar"` or `"panel"` (for LayerShell config)      |
-| `_value`            | number  | progress_bar           | Current progress value (0.0–1.0)                  |
-| `_workspace_buttons`| table   | workspaces             | Internal list of workspace button configs         |
-| `_layer`            | string  | window                 | LayerShell layer: `"background"`, `"bottom"`, `"top"` (default), `"overlay"` |
-| `_has_overlay`      | boolean | window (popup)         | Create a backdrop window beneath the popup        |
+| Field               | Type    | Applies To                    | Description                                      |
+|---------------------|---------|-------------------------------|--------------------------------------------------|
+| `_type`             | string  | All                           | GTK widget type: `"window"`, `"label"`, `"button"`, `"box"`, `"separator"`, `"progress_bar"`, `"dialog"`, `"popover"` |
+| `_text`             | string  | label, button                 | The text content (set from `label` or `text` prop) |
+| `_timer_enabled`    | boolean | All                           | Enable periodic timer updates                     |
+| `_timer_interval`   | number  | All (if timer enabled)        | Timer interval in seconds (float)                 |
+| `_children`         | table   | window, box, popover          | Array of child config tables                      |
+| `_format`           | string  | clock                         | `os.date()` format string for time display        |
+| `_orientation`      | string  | box, separator, window, popover | `"horizontal"` or `"vertical"`                  |
+| `_spacing`          | number  | box, window, popover          | Pixel spacing between children                    |
+| `_on_click`         | function| button                        | Lua function to call on button click              |
+| `_window_type`      | string  | window                        | `"bar"` or `"panel"` (for LayerShell config)      |
+| `_value`            | number  | progress_bar                  | Current progress value (0.0–1.0)                  |
+| `_workspace_buttons`| table   | workspaces                    | Internal list of workspace button configs         |
+| `_layer`            | string  | window, dialog                | LayerShell layer set from YAML `layer` property: `"background"`, `"bottom"`, `"top"` (default), `"overlay"` |
+| `blockInput`        | boolean | dialog                        | Block input events behind the dialog (modal)      |
+| `autohide`          | number  | popover                       | Auto-hide delay in ms (0 = no auto-hide)          |
+| `showPointer`       | boolean | popover                       | Show a pointer arrow pointing to the parent widget|
 
 ### User-Facing Fields (from YAML)
 
@@ -297,23 +370,29 @@ These are the properties users set in `config.yaml`. Widget modules map them to 
 |---------------------|-----------------|-----------------------------|-------------------------------------------------|
 | `id`                | string          | All                         | Unique widget identifier                        |
 | `style_class`       | string          | All                         | CSS class(es) (space-separated)                 |
-| `anchor`            | string or array | bar, panel, popup           | Edge(s) to anchor: string `"top"` or array `["top", "bottom"]`; `"center"`=no anchors |
-| `height`            | number          | bar, panel                  | Window height in pixels                         |
-| `visible`           | boolean         | panel, popup                | Initial visibility (`false` = hidden)           |
-| `exclusive`         | boolean         | bar, panel, popup, box      | Reserve space on the layer-shell edge (default varies by widget) |
+| `layer`             | string          | bar, panel, dialog          | Wayland layer-shell layer: `"top"` (default for bar/panel) or `"overlay"` (default for dialog) |
+| `anchor`            | string or array | bar, panel                  | Edge(s) to anchor: string `"top"` or array `["top", "bottom"]`; `"center"`=no anchors |
+| `height`            | number          | bar, panel                  | Window height in pixels (legacy; prefer `size.h`) |
+| `visible`           | boolean         | panel, dialog, popover      | Initial visibility (`false` = hidden)           |
+| `exclusive`         | boolean         | bar, panel, box             | Reserve space on the layer-shell edge (default varies by widget) |
 | `margin`            | table           | All windows and box         | Edge distances: `{all: 4}`, `{top: 2, horizontal: 4}`, etc. (last-wins per axis) |
 | `padding`           | table           | All windows and box         | Inner padding (same format as `margin`)         |
-| `size`              | string or table | popup                       | `"auto"` (fit content), `{w: 400, h: 300}`, or `"fill"` (anchor all edges) |
-| `overlay`           | table           | popup                       | Backdrop overlay config: `{intensity: 4}` (1-10) |
+| `size`              | string or table | bar, panel, dialog          | `"auto"` (fit content), `{w: 400, h: 300}`, or `"fill"` |
+| `blockInput`        | boolean         | dialog                      | Block input events behind the dialog (modal)    |
+| `autohide`          | number          | popover                     | Auto-hide delay in ms (0 = no auto-hide)        |
+| `showPointer`       | boolean         | popover                     | Show pointer arrow pointing to parent widget    |
+| `title`             | string          | dialog                      | Dialog title text                               |
+| `content`           | string          | dialog                      | Dialog content text                             |
+| `buttons`           | array           | dialog                      | Array of button definitions for the dialog      |
 | `label`             | string          | button                      | Button label text                               |
 | `text`              | string          | label                       | Label text                                      |
-| `on_click`          | string          | button, clock               | Name of an event handler function in `events.lua` |
+| `on_click`          | string or array | button, clock, all          | Event handler(s): string `"events[func]"`, `"lua[code]"`, `"bash[cmd]"`, or array of these; plain string `"func_name"` for backward compat |
 | `format`            | string          | clock                       | `os.date()` format string                       |
 | `interval`          | number          | clock                       | Update interval in seconds                      |
 | `update_interval`   | number          | cpu, workspaces             | Update interval in seconds                      |
-| `orientation`       | string          | box, separator              | `"horizontal"` or `"vertical"`                  |
-| `spacing`           | number          | box                         | Pixel spacing between children                  |
-| `children`          | array           | bar, panel, popup, box      | Nested widget definitions                       |
+| `orientation`       | string          | box, separator, popup       | `"horizontal"` or `"vertical"`                  |
+| `spacing`           | number          | box, popup                  | Pixel spacing between children                  |
+| `children`          | array           | bar, panel, box, popup        | Nested widget definitions                    |
 | `warning_threshold` | number          | cpu                         | CPU % to trigger warning CSS class              |
 | `critical_threshold`| number          | cpu                         | CPU % to trigger critical CSS class             |
 
@@ -361,15 +440,46 @@ When `"center"` is present in the array, no anchors are applied at all.
 
 ### Click Handler Resolution
 
-When a YAML entry specifies `on_click: "function_name"`, the WidgetBuilder looks up `function_name` in the global Lua scope (i.e., a function defined in `events.lua`). At click time, the framework calls the function with the widget's ID as the single argument:
+When a YAML entry specifies `on_click`, the WidgetBuilder supports three command types plus backward-compatible plain strings.
 
-```lua
-function toggle_panel_visibility(source_widget_id)
-    -- source_widget_id is the string ID of the clicked widget
-end
+#### Multi-Type Command Syntax
+
+Each entry can be a single string or an array of strings using one of these command types:
+
+| Syntax                | Type     | Description                                      |
+|-----------------------|----------|--------------------------------------------------|
+| `events[function_name]` | events | Call a global Lua function from `events.lua` with the widget ID as argument |
+| `lua[lua_code]`         | lua     | Execute an inline Lua expression                  |
+| `bash[shell_cmd]`       | bash    | Run a shell command asynchronously                |
+
+These can be combined in an array to execute multiple commands sequentially on click:
+
+```yaml
+# Single command — opens a dialog
+on_click: "lua[widget_set_visible(\"my_dialog\", true)]"
+
+# Multiple commands — log, toggle panel, and run a script
+on_click:
+  - "events[toggle_panel_visibility]"
+  - "lua[log_info('Panel toggled from about_btn')]"
+  - "bash[notify-send 'Panel Toggled']"
 ```
 
-For programmatic widgets (e.g., workspace buttons created entirely in Lua), the `_on_click` field stores a Lua closure directly. The framework checks for this closure at click time via the `_nebula_widget_configs[id]._on_click` lookup:
+Commands are executed in order. Each command runs independently — if one fails, subsequent commands still execute.
+
+#### Backward Compatibility
+
+Plain strings without a `type[...]` prefix are treated as `events[function_name]`:
+
+```yaml
+on_click: "toggle_panel_visibility"     # Same as events[toggle_panel_visibility]
+```
+
+This matches the Phase 2 behavior, so existing configs remain compatible.
+
+#### Programmatic Closures (`_on_click`)
+
+For widgets created entirely in Lua (e.g., workspace buttons), use the internal `_on_click` field with a Lua closure:
 
 ```lua
 -- In a widget module's M.create():
@@ -381,7 +491,7 @@ local btn = {
 }
 ```
 
-The framework tries `on_click` (string lookup) first, then falls back to `_on_click` (closure dispatch).
+The framework tries YAML `on_click` first (with multi-type dispatch), then falls back to `_on_click` (closure dispatch).
 
 ---
 
@@ -419,6 +529,8 @@ _widget_event_handlers = {
     toggle_clock_format     = function(source) ... end,
     show_about_dialog       = function(source) ... end,
     reload_config           = function(source) ... end,
+    show_quick_menu         = function(source) ... end,
+    quit_application        = function(source) ... end,
 }
 ```
 
@@ -447,8 +559,18 @@ The `_type` field in a config table determines which GTK widget is created:
 | `"box"`         | `Gtk.Box`        | `_orientation`, `_spacing`, `_children`, `margin`, `padding` |
 | `"separator"`   | `Gtk.Separator`  | `_orientation`                |
 | `"progress_bar"`| `Gtk.ProgressBar`| `_text`, `_value`             |
+| `"dialog"`      | `Gtk.Window`     | Full-screen overlay with all 4 anchors, centered dialog-box (`title`, `content`, `buttons`), `blockInput` via GestureClick, on-demand lifecycle (created by `show_dialog`, destroyed by `destroy_dialog`) |
+| `"popover"`     | `Gtk.Popover`    | `autohide`, `showPointer`, `_orientation`, `_spacing`, `_children` |
 
-When `_type` is `"window"`, the WidgetBuilder additionally applies LayerShell settings via the `anchor`, `_layer`, and `exclusive` fields, making the window a proper Wayland layer-surface (bar, panel, or popup).
+When `_type` is `"window"`, the WidgetBuilder additionally applies LayerShell settings via the `anchor`, `_layer`, and `exclusive` fields, making the window a proper Wayland layer-surface (bar or panel).
+
+When `_type` is `"dialog"`, the WidgetBuilder creates a **full-screen layer-shell** `Gtk.Window` on the layer specified by the YAML `layer` property (defaults to `OVERLAY`) with all four anchors, making it span the entire display. Inside, a centered dialog-box is constructed using the `title`, `content`, and `buttons` config fields. Input blocking is implemented via a `GestureClick` on the backdrop — no separate shadow widget or close button is used. Dialogs follow an **on-demand** lifecycle: they are **not** created at startup; `show_dialog(id)` builds them at runtime, and `destroy_dialog(id)` removes them (enabling re-creation). If a window has `set_data("no-layer", win)`, layer-shell initialization is skipped.
+
+> **Note:** Dialogs are **not** regular `Gtk.Window` instances — they use the Wayland layer-shell protocol's `OVERLAY` layer with all four anchors, ensuring they block input across the entire screen.
+
+When `_type` is `"popover"`, the WidgetBuilder creates a `Gtk.Popover` anchored to the trigger widget. Popovers are lightweight, auto-hiding surfaces that follow their parent widget's position. `Registry.show_all()` skips `Gtk.Popover` widgets, so they remain hidden until explicitly shown via `M.show()` or `popup_widget()`.
+
+> **Note:** When `autohide` is set, the auto-hide timer is **hover-aware**: it resets whenever the pointer enters the popover, and only fires after the pointer leaves and the full delay has elapsed. This prevents the popover from disappearing while the user is interacting with its contents.
 
 ---
 
@@ -476,7 +598,8 @@ This means `require("nebula/clock")` resolves to either:
 |--------------------|----------------|--------------------------------------|
 | `nebula/bar`       | window (bar)   | Top/bottom anchored bar              |
 | `nebula/panel`     | window (panel) | Toggleable overlay panel             |
-| `nebula/popup`     | window (popup) | Centered popup with backdrop overlay |
+| `nebula/dialog`    | dialog         | Modal overlay dialog (layer-shell)   |
+| `nebula/popup`     | popover        | Popover anchored to a parent widget  |
 | `nebula/clock`     | label          | Time display with auto-update        |
 | `nebula/cpu`       | progress_bar   | CPU usage meter with color thresholds|
 | `nebula/button`    | button         | Clickable button                     |
@@ -490,6 +613,8 @@ This means `require("nebula/clock")` resolves to either:
 ## CSS Styling
 
 NebulaShell uses GTK4 CSS for widget styling. All CSS is loaded from the `styles/style.css` file, with user files taking priority over system defaults.
+
+> **Important:** CSS is loaded **before** widget building to prevent render-order crashes. This means your CSS is always applied when widgets first appear.
 
 ### CSS File Location
 
@@ -527,17 +652,63 @@ All widgets use the `style_class` property (mapped to GTK CSS classes):
     background: #ff0000;
 }
 
-/* Popup widget styling */
-.popup {
+/* Dialog — full-screen overlay background */
+.dialog {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* Centered dialog surface */
+.dialog-box {
     background: rgba(30, 30, 40, 0.97);
     border: 1px solid #555555;
     border-radius: 8px;
-    padding: 12px;
+    padding: 20px;
+    min-width: 300px;
 }
 
-/* Popup backdrop overlay */
-.popup-overlay {
-    background: rgba(0, 0, 0, 0.4);
+/* Dialog title */
+.dialog-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 8px;
+}
+
+/* Dialog content text */
+.dialog-content {
+    font-size: 14px;
+    color: #abb2bf;
+    margin-bottom: 16px;
+}
+
+/* Dialog action buttons */
+.dialog-button {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border-radius: 4px;
+    padding: 6px 16px;
+}
+
+.dialog-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Destructive / critical action buttons */
+.dialog-button.critical {
+    background: rgba(255, 0, 0, 0.3);
+    color: #ff6666;
+}
+
+.dialog-button.critical:hover {
+    background: rgba(255, 0, 0, 0.5);
+}
+
+/* Popover widget styling */
+.popover {
+    background: rgba(40, 40, 50, 0.98);
+    border: 1px solid #555555;
+    border-radius: 6px;
+    padding: 8px;
 }
 
 /* Hover states for interactive widgets */
@@ -595,44 +766,69 @@ YAML config.yaml
        │  Parses YAML → _nebula_config (Lua table)
        │  Loads events.lua → global functions
        ▼
-  WidgetBuilder.build_from_config()
-       │  Iterates _nebula_config keys
+  ConfigLoader.load_widget_events()
+       │  Parses event handlers from events.lua
+       ▼
+  CssManager.load()               ← CSS loaded BEFORE widget building
        │
        ▼
-  For each widget type:
-       │  1. Resolve widget file (user then system path)
-       │  2. Load widget .lua file (gets M table)
-       │  3. Call M.create(props, _widget_event_handlers)
-       │     ├─ Merges defaults: config = M.merge_defaults(props)
-       │     ├─ Sets internal fields: config._type = "..."
-       │     ├─ Calls register_widget(config.id, config)
-       │     └─ Returns config table
-       │  4. Builder reads config to create GTK widget
-       │     ├─ create_gtk_widget(id, config._type)
-       │     ├─ Applies CSS classes
-       │     ├─ Initializes LayerShell (if window)
-       │     │   ├─ anchors (string or array)
-       │     │   ├─ exclusive zone
-       │     │   ├─ layer (top/overlay/background)
-       │     │   └─ margin (edge distances)
-       │     ├─ Applies size (auto / explicit / fill)
-       │     ├─ Creates popup backdrop overlay (if _has_overlay)
-       │     ├─ Sets up timers (if _timer_enabled)
-       │     ├─ Wires click handlers (if on_click)
-       │     └─ Builds children recursively (if _children)
-       │
-       ▼
-  Application.activate()
-       │  CSS loaded
-       │  All widgets shown via Registry.show_all()
-       ▼
-  Runtime (event-driven)
-       │  Timer callbacks → M.update() calls
-       │  Button clicks → global handler functions
-       │  Lua bridge calls → widget_* functions
-       │
-       ▼
-  Application.shutdown()
-       Registry.cleanup()
-       M.destroy() called for each widget
+   WidgetBuilder.build_from_config()
+        │  Iterates _nebula_config keys
+        │  Skips "nebula/dialog" — deferred for on-demand creation
+        │
+        ▼
+   For each widget type (excluding dialog):
+        │  1. Resolve widget file (user then system path)
+        │  2. Load widget .lua file (gets M table)
+        │  3. Call M.create(props, _widget_event_handlers)
+        │     ├─ Merges defaults: config = M.merge_defaults(props)
+        │     ├─ Sets internal fields: config._type = "..."
+        │     ├─ Calls register_widget(config.id, config)
+        │     └─ Returns config table
+        │  4. Builder reads config to create GTK widget
+        │     ├─ create_gtk_widget(id, config._type)
+        │     ├─ Applies CSS classes
+        │     ├─ Initializes LayerShell (if window or dialog)
+        │     │   ├─ anchors (string or array)
+        │     │   ├─ exclusive zone
+        │     │   ├─ layer via parse_layer() (reads _layer from config)
+        │     │   ├─ margin (edge distances)
+        │     │   └─ no-layer flag skip (if set_data("no-layer", win))
+        │     ├─ Applies size (auto / explicit / fill)
+        │     ├─ Sets up timers (if _timer_enabled)
+        │     ├─ Wires click handlers (if on_click, multi-type dispatch)
+        │     └─ Builds children recursively (if _children)
+        │
+        ▼
+    Application.activate()
+         │  All widgets shown via Registry.show_all()
+         │  (skips Gtk.Popover — popups start hidden)
+         │  (dialog not present at startup — created on-demand via show_dialog())
+         │
+         ▼
+    Dialog Lifecycle (on-demand)
+         │  show_dialog(id)
+         │  ├─ Reads _nebula_config["nebula/dialog"] (YAML config)
+         │  ├─ Loads dialog.lua → M.create(props)
+         │  ├─ Stores config → builds GTK → registers → shows
+         │  │
+         │  destroy_dialog(id)
+         │  ├─ Registry.remove(id) → widget.destroy()
+         │  ├─ _nebula_widget_configs[id] = nil
+         │  └─ Ready to be re-created on next show_dialog
+         │  │
+         │  toggle_dialog(id)
+         │  ├─ If widget exists in Registry → destroy_dialog(id)
+         │  └─ If not → show_dialog(id)
+         │
+         ▼
+    Runtime (event-driven)
+        │  Timer callbacks → M.update() calls
+        │  Button clicks → global handler functions
+        │  Lua bridge calls → widget_* functions
+        │
+        ▼
+   Application.shutdown()
+        Registry.cleanup()
+        M.destroy() called for each widget
 ```

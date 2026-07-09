@@ -53,6 +53,32 @@ namespace NebulaShell {
             return result;
         }
 
+        public static void remove(string id) {
+            Gtk.Widget? widget = widget_map.lookup(id);
+            if (widget == null) return;
+
+            widget_map.remove(id);
+
+            Gtk.Widget[] new_list = {};
+            foreach (var w in widget_list) {
+                if (w != widget) {
+                    new_list += w;
+                }
+            }
+            widget_list = new_list;
+
+            if (widget is Gtk.Window) {
+                ((Gtk.Window) widget).destroy();
+            } else {
+                if (widget.get_parent() != null) {
+                    widget.unparent();
+                }
+                widget.dispose();
+            }
+
+            Logger.debug(@"Removed widget: $(id)");
+        }
+
         public static string[] get_all_ids() {
             string[] ids = {};
             widget_map.foreach((key, val) => { ids += key; });
@@ -61,11 +87,9 @@ namespace NebulaShell {
 
         public static void show_all() {
             foreach (var widget in widget_list) {
-                if (!(widget is Gtk.Window)) {
+                if (!(widget is Gtk.Window) && !(widget is Gtk.Popover)) {
                     widget.set_visible(true);
                 }
-                // Windows manage their own initial visibility via the `visible` config field
-                // (handled in WidgetBuilder.create_widget_from_lua())
             }
             Logger.info("All widgets shown");
         }

@@ -30,12 +30,43 @@ int main(string[] args) {
                 GLib.FileUtils.get_contents(pid_path, out pid_str);
                 int pid = int.parse(pid_str.strip());
                 if (pid > 0) {
-                    Posix.kill(pid, Posix.Signal.TERM);
+                    if (Posix.kill(pid, Posix.Signal.TERM) != 0) {
+                        stderr.printf("Error: Failed to send quit signal.\n");
+                        return 1;
+                    }
                     stdout.printf("Sent quit signal to NebulaShell (PID: %d)\n", pid);
                     return 0;
                 }
             } catch (Error e) {
                 // fall through to error
+            }
+            stderr.printf("Error: NebulaShell is not running.\n");
+            return 1;
+
+        case "toggle":
+            if (command_args.length < 1) {
+                stderr.printf("Usage: nebula-shell toggle <widget_id>\n");
+                return 1;
+            }
+            string? runtime_dir = Environment.get_variable("XDG_RUNTIME_DIR");
+            if (runtime_dir == null) runtime_dir = "/tmp";
+            string pid_path = Path.build_filename(runtime_dir, "nebula-shell", "pid");
+            try {
+                string pid_str;
+                GLib.FileUtils.get_contents(pid_path, out pid_str);
+                int pid = int.parse(pid_str.strip());
+                if (pid > 0) {
+                    string toggle_path = Path.build_filename(runtime_dir, "nebula-shell", "toggle");
+                    GLib.FileUtils.set_contents(toggle_path, command_args[0]);
+                    if (Posix.kill(pid, Posix.Signal.USR1) != 0) {
+                        stderr.printf("Error: Failed to send toggle signal.\n");
+                        return 1;
+                    }
+                    stdout.printf("Sent toggle signal to NebulaShell (PID: %d) for widget '%s'\n", pid, command_args[0]);
+                    return 0;
+                }
+            } catch (Error e) {
+                // fall through
             }
             stderr.printf("Error: NebulaShell is not running.\n");
             return 1;

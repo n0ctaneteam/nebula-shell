@@ -1,26 +1,29 @@
 # /etc/nebula-shell/config.yaml
-# System default configuration for NebulaShell
+# NebulaShell default configuration — showcases all built-in widget modules
+
 nebula/bar:
   id: main_bar
   style_class: "bar"
+  layer: top
   anchor: [top]
+  exclusive: true
   children:
     - nebula/workspaces:
         id: workspaces
         style_class: "workspaces"
 
+    - nebula/clock:
+        id: system_clock
+        style_class: "clock"
+        format: "Time: %H:%M:%S"
+        on_click: "toggle_clock_format"
+
     - nebula/box:
         id: right_section
         orientation: horizontal
-        spacing: 5
+        spacing: 8
         style_class: "right-section"
         children:
-          - nebula/clock:
-              id: system_clock
-              style_class: "clock"
-              format: "%H:%M:%S"
-              on_click: "toggle_clock_format"
-
           - nebula/cpu:
               id: cpu_meter
               style_class: "cpu-bar"
@@ -28,17 +31,32 @@ nebula/bar:
 
           - nebula/button:
               id: toggle_panel_btn
-              label: \u{2715}
+              label: "\u2630"
               style_class: "panel-toggle-btn"
               on_click: "toggle_panel_visibility"
+
+           - nebula/button:
+               id: show_dialog_btn
+               label: "\u2139"
+               style_class: "dialog-launch-btn"
+               on_click: "lua[toggle_dialog('demo_dialog')]"
+
+          - nebula/separator:
+              id: bar_sep
+              style_class: "bar-separator"
+
+          - nebula/label:
+              id: status_label
+              text: "Ready"
+              style_class: "status-label"
 
 nebula/panel:
   id: main_panel
   style_class: "panel"
+  layer: top
   visible: false
-  anchor: [bottom]
-  exclusive: true
-  height: 300
+  anchor: [top]
+  exclusive: false
   children:
     - nebula/box:
         id: panel_content
@@ -47,73 +65,101 @@ nebula/panel:
         children:
           - nebula/label:
               id: panel_title
-              text: "NebulaShell Control Panel"
+              text: "Control Panel"
               style_class: "panel-title"
 
-          - nebula/button:
-              id: close_panel_btn
-              label: "Close Panel"
-              style_class: "panel-close-btn"
-              on_click: "toggle_panel_visibility"
+          - nebula/box:
+              id: button_row
+              orientation: horizontal
+              spacing: 8
+              children:
+                - nebula/button:
+                    id: about_btn
+                    label: "About"
+                    style_class: "panel-btn"
+                    on_click: "lua[toggle_dialog('demo_dialog')]"
+
+                - nebula/button:
+                    id: reload_btn
+                    label: "Reload"
+                    style_class: "panel-btn"
+                    on_click: "reload_config"
+
+                - nebula/button:
+                    id: close_panel_btn
+                    label: "Close"
+                    style_class: "panel-btn panel-close-btn"
+                    on_click: "toggle_panel_visibility"
 
           - nebula/separator:
               id: panel_sep
               style_class: "panel-separator"
 
           - nebula/box:
-              id: panel_actions
+              id: info_section
               orientation: horizontal
-              spacing: 5
-              style_class: "panel-actions"
-              children:
-                - nebula/button:
-                    id: about_btn
-                    label: "About NebulaShell"
-                    style_class: "panel-about-btn"
-                    on_click: "show_about_dialog"
-
-                - nebula/button:
-                    id: reload_btn
-                    label: "Reload Config"
-                    style_class: "panel-reload-btn"
-                    on_click: "reload_config"
-
-nebula/popup:
-  id: demo_popup
-  style_class: "popup"
-  anchor: center
-  size: {w: 400, h: 300}
-  visible: false
-  children:
-    - nebula/box:
-        id: popup_content
-        orientation: vertical
-        spacing: 8
-        children:
-          - nebula/box:
-              id: popup_header
-              orientation: horizontal
-              spacing: 0
+              spacing: 12
               children:
                 - nebula/label:
-                    id: popup_title
-                    text: "Popup Demo"
-                    style_class: "popup-title"
+                    id: cpu_label
+                    text: "CPU:"
+                    style_class: "info-label"
 
-                - nebula/box:
-                    id: popup_header_spacer
-                    orientation: horizontal
+                - nebula/cpu:
+                    id: panel_cpu
+                    style_class: "cpu-bar"
+                    update_interval: 2
 
-                - nebula/button:
-                    id: popup_close_btn
-                    label: "\u{2715}"
-                    style_class: "popup-close-btn"
+          - nebula/button:
+              id: show_popup_btn
+              label: "Quick Menu \u25BE"
+              style_class: "panel-btn"
+              on_click: "show_quick_menu"
 
-          - nebula/separator:
-              id: popup_sep
-              style_class: "popup-separator"
+nebula/dialog:
+  id: demo_dialog
+  style_class: "dialog"
+  layer: overlay
+  blockInput: false
+  visible: false
+  size:
+    w: 420
+    h: 220
+  padding: { top: 24, bottom: 24, left: 32, right: 32 }
+  title: "About NebulaShell"
+  content: "NebulaShell v0.1.0\n\nA lightweight Wayland widget framework\nfor Hyprland and wlroots compositors.\n\nBuilt with Vala + GTK4 + Lua."
+  buttons:
+    - confirm:
+        label: "OK"
+        on_click: "lua[destroy_dialog('demo_dialog')]"
+    - cancel:
+        label: "Cancel"
 
-          - nebula/label:
-              id: popup_body
-              text: "This is a demo popup widget.\n\nPopups appear on the OVERLAY layer with\na backdrop beneath them on the TOP layer."
-              style_class: "popup-content"
+nebula/popup:
+  id: quick_menu
+  style_class: "popup"
+  autohide: 5
+  showPointer: true
+  orientation: vertical
+  children:
+    - nebula/button:
+        id: menu_settings
+        label: "Settings"
+        style_class: "menu-item"
+        on_click: "lua[log_info('Settings clicked')]"
+
+    - nebula/button:
+        id: menu_about
+        label: "About"
+        style_class: "menu-item"
+        on_click: "lua[toggle_dialog('demo_dialog')]"
+
+    - nebula/separator:
+        id: menu_sep
+        style_class: "menu-separator"
+
+    - nebula/button:
+        id: menu_quit
+        label: "Quit"
+        style_class: "menu-item menu-item-danger"
+        on_click: "quit_application"

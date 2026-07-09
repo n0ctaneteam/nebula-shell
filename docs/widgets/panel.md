@@ -9,8 +9,12 @@ The **panel** widget is a toggleable overlay window anchored to the top or botto
 | `id` | `string` | — | **Required.** Unique identifier for the panel. Used for registration, visibility toggling, and cross-widget references. |
 | `style_class` | `string` | `"panel"` | CSS class(es) applied to the panel window. |
 | `visible` | `boolean` | `false` | Initial visibility state. Panels start hidden by default. |
-| `anchor` | `string` | `"bottom"` | Screen edge to anchor the panel. Must be `"top"` or `"bottom"`. |
-| `height` | `number` | `300` | Height of the panel in pixels. Controls the window default size. |
+| `anchor` | `string` or `array` | `"bottom"` | Screen edge to anchor the panel. Must be `"top"` or `"bottom"`. Can be an array (e.g., `["top", "bottom"]`). |
+| `height` | `number` | `300` | Height of the panel in pixels. Legacy field; prefer `size.h` for consistency. |
+| `size` | `any` | `"auto"` | Controls the panel dimensions. See [Size Modes](#size-modes) below. Takes precedence over `height`. |
+| `exclusive` | `boolean` | `false` | Reserve space on the screen edge. Set to `false` for overlay panels that cover content. |
+| `margin` | `table` | — | Edge distances from screen edges. |
+| `padding` | `table` | — | Inner padding inside the panel window. |
 | `children` | `array` | `[]` | List of child widget configurations rendered inside the panel. |
 
 ## Usage Example
@@ -20,8 +24,8 @@ nebula/panel:
   id: main_panel
   style_class: "panel"
   visible: false
-  anchor: bottom
-  height: 300
+  anchor: [top]
+  exclusive: false
   children:
     - nebula/box:
         id: panel_content
@@ -50,11 +54,11 @@ nebula/panel:
                 - nebula/button:
                     id: about_btn
                     label: "About"
-                    on_click: "show_about_dialog"
+                    on_click: "lua[widget_set_visible('demo_dialog', true)]"
 
                 - nebula/button:
                     id: reload_btn
-                    label: "Reload Config"
+                    label: "Reload"
                     on_click: "reload_config"
 ```
 
@@ -65,7 +69,14 @@ Creates a new panel widget configuration.
 
 - **`props`** (`table`) — Property table matching the schema above.
 - **`event_handlers`** (`table`) — Global event handler functions from `events.lua`.
-- **Returns** (`table`) — The merged configuration table with internal metadata (`_type = "window"`, `_window_type = "panel"`).
+- **Returns** (`table`) — The merged configuration table with internal metadata.
+
+The function sets:
+- `config._type = "window"` — creates a `Gtk.Window`
+- `config._window_type = "panel"` — identifies it as a panel
+- `config._orientation = config.orientation or "horizontal"` — internal orientation for the child `Gtk.Box`
+- `config._spacing = config.spacing or 0` — internal spacing for the child `Gtk.Box`
+- `config._children = config.children` — child widget configs
 
 The configuration is registered via `register_widget()` if an `id` is provided. The `visible` property is passed to the core engine, which initializes the layer-shell window in the correct visibility state.
 
@@ -94,23 +105,31 @@ The recommended toggle pattern in your `events.lua`:
 
 ```lua
 function toggle_panel_visibility(source_widget)
-    local config = get_widget_by_id("main_panel")
     local is_visible = widget_get_visible("main_panel")
     widget_set_visible("main_panel", not is_visible)
 
     -- Update the toggle button icon
-    local toggle_btn = get_widget_by_id("toggle_panel_btn")
-    if toggle_btn then
-        if not is_visible then
-            widget_set_label("toggle_panel_btn", "\u2715")  -- ✕
-        else
-            widget_set_label("toggle_panel_btn", "\u2630")  -- ☰
-        end
+    if not is_visible then
+        widget_set_label("toggle_panel_btn", "\u2715")  -- ✕
+    else
+        widget_set_label("toggle_panel_btn", "\u2630")  -- ☰
     end
 
     log_info("Panel visibility toggled: " .. tostring(not is_visible))
 end
 ```
+
+## Size Modes
+
+The `size` property supports three modes:
+
+| Value | Description |
+|-------|-------------|
+| `"auto"` | Width fills the screen edge (anchored). Height determined by `height` or content. |
+| `"fill"` | Anchors to all four edges, filling the entire screen. |
+| `{h: 300}` | Explicit height in pixels. Width is still full-screen (anchored). |
+
+When both `height` and `size.h` are specified, `size.h` takes precedence.
 
 ## Internal Fields
 
@@ -118,6 +137,8 @@ end
 |-------|------|-------------|
 | `_type` | `string` | Set to `"window"`. Tells the builder to create a `Gtk.Window`. |
 | `_window_type` | `string` | Set to `"panel"`. Reserved for distinguishing panel vs. bar behavior. |
+| `_orientation` | `string` | Orientation for the internal `Gtk.Box` child (defaults to `"horizontal"`). |
+| `_spacing` | `number` | Spacing for the internal `Gtk.Box` child (defaults to `0`). |
 | `_children` | `array` | Child widget configs built into a `Gtk.Box` inside the window. |
 
 ## Behavior
@@ -125,5 +146,5 @@ end
 - **Hidden by default**: The panel starts invisible. Set `visible: true` if you want it shown at startup.
 - **Anchored positioning**: Anchored to `top` or `bottom` via the Wayland layer-shell protocol. Full width at the configured height.
 - **Toggle via Lua**: Use `M.toggle_visibility()` or call `widget_set_visible(id, bool)` directly from any event handler.
-- **Child layout**: A `Gtk.Box` (horizontal by default) is set as the window's child. For vertical layouts, nest a `nebula/box` with `orientation: vertical`.
+- **Child layout**: A `Gtk.Box` (horizontal by default, using `_orientation` and `_spacing`) is set as the window's child. For vertical layouts, set `orientation: vertical` or nest a `nebula/box` with `orientation: vertical`.
 - **CSS styling**: The `style_class` is applied to the window. Use it for background colors, borders, shadows, and slide-in animations where supported.

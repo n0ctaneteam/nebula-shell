@@ -41,3 +41,17 @@ end
 function reload_config(source_widget)
     log_info("Config reload requested (not yet implemented)")
 end
+
+-- Show quick menu popup anchored to the source button
+function show_quick_menu(source_widget)
+    local parent = get_widget_by_id(source_widget)
+    if parent == nil then return end
+    widget_set_parent("quick_menu", parent)
+    popup_widget("quick_menu")
+end
+
+-- Quit application
+function quit_application(source_widget)
+    log_info("Quit requested")
+    os.exit(0)
+end

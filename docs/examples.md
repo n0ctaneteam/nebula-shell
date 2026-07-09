@@ -13,7 +13,9 @@ Practical YAML + Lua examples for building widgets with NebulaShell.
 - [Example 5: events.lua with Multiple Handlers](#example-5-eventslua-with-multiple-handlers)
 - [Example 6: Workspace Switcher with Custom Styling](#example-6-workspace-switcher-with-custom-styling)
 - [Example 7: Nested Box Layout](#example-7-nested-box-layout)
-- [Example 8: Popup Widget](#example-8-popup-widget)
+- [Example 8: Dialog Widget](#example-8-dialog-widget)
+- [Example 9: Popover Widget](#example-9-popover-widget)
+- [Example 10: Multi-Type Commands](#example-10-multi-type-commands)
 - [CSS Styling Reference](#css-styling-reference)
 - [CLI Usage](#cli-usage)
 
@@ -105,16 +107,15 @@ nebula/bar:
         id: about_btn
         label: "?"
         style_class: "about-btn"
-        on_click: "show_about_dialog"
+        on_click: "lua[widget_set_visible('demo_dialog', true)]"
 
 # --- Panel (hidden by default) ---
 nebula/panel:
   id: main_panel
   style_class: "panel"
   visible: false                   # Starts hidden
-  anchor: [bottom]
+  anchor: [top]
   exclusive: false                 # Don't reserve edge space
-  height: 300
   children:
     - nebula/label:
         id: panel_title
@@ -187,7 +188,7 @@ end
 - The panel uses `visible: false` so it starts hidden.
 - The toggle button's label changes between a hamburger and close icon to indicate state.
 - Both the bar button and the panel's "Close Panel" button call the same handler.
-- The panel is a `Gtk.Window` anchored to the bottom with a fixed height of 300px.
+- The panel is a `Gtk.Window` anchored to the top with content-driven height.
 - `exclusive: false` on the panel means it does not reserve edge space — it covers content.
 
 ---
@@ -306,11 +307,11 @@ nebula/bar:
 
 ## Example 4: Complete config.yaml
 
-A comprehensive configuration demonstrating all built-in widget types and features.
+A comprehensive configuration demonstrating all 11 built-in widget types and features, matching the default NebulaShell config.
 
 ```yaml
 # ~/.config/nebula-shell/config.yaml
-# Complete NebulaShell configuration example
+# Complete NebulaShell configuration — showcases all built-in widget modules
 
 # ── Main Bar ─────────────────────────────────────────
 nebula/bar:
@@ -318,50 +319,30 @@ nebula/bar:
   style_class: "bar"
   anchor: [top]
   exclusive: true
-  margin:
-    horizontal: 4
   children:
-    # Left section: workspaces
+    # Workspace switcher (left)
     - nebula/workspaces:
         id: workspaces
         style_class: "workspaces"
-        update_interval: 0.5
 
-    # Spacer (empty box with fixed width via CSS)
-    - nebula/box:
-        id: spacer
-        style_class: "spacer"
+    # Clock (center-left)
+    - nebula/clock:
+        id: system_clock
+        style_class: "clock"
+        format: "%H:%M:%S"
+        on_click: "toggle_clock_format"
 
-    # Right section: clock, cpu, buttons
+    # Right section: CPU, buttons, separator, label
     - nebula/box:
         id: right_section
-        style_class: "right-section"
         orientation: horizontal
-        spacing: 6
+        spacing: 8
+        style_class: "right-section"
         children:
-          - nebula/clock:
-              id: system_clock
-              style_class: "clock"
-              format: "%H:%M:%S"
-              interval: 1
-              on_click: "toggle_clock_format"
-
-          - nebula/separator:
-              id: clock_separator
-              style_class: "separator"
-              orientation: vertical
-
           - nebula/cpu:
               id: cpu_meter
               style_class: "cpu-bar"
-              update_interval: 2
-              warning_threshold: 70
-              critical_threshold: 90
-
-          - nebula/separator:
-              id: cpu_separator
-              style_class: "separator"
-              orientation: vertical
+              update_interval: 1
 
           - nebula/button:
               id: toggle_panel_btn
@@ -369,47 +350,169 @@ nebula/bar:
               style_class: "panel-toggle-btn"
               on_click: "toggle_panel_visibility"
 
-# ── Popup Demo ───────────────────────────────────────
-nebula/popup:
-  id: demo_popup
-  style_class: "popup"
-  anchor: center
-  size: {w: 400, h: 300}
-  visible: false
-  overlay:
-    intensity: 4
-  children:
-    - nebula/box:
-        id: popup_content
-        orientation: vertical
-        spacing: 8
-        children:
-          - nebula/label:
-              id: popup_title
-              text: "Popup Demo"
-              style_class: "popup-title"
-
           - nebula/button:
-              id: popup_close_btn
-              label: "\u{2715}"
-              style_class: "popup-close-btn"
-              on_click: "close_demo_popup"
+              id: show_dialog_btn
+              label: "\u2139"
+              style_class: "dialog-launch-btn"
+              on_click: "lua[widget_set_visible('demo_dialog', true)]"
 
           - nebula/separator:
-              id: popup_sep
-              style_class: "popup-separator"
+              id: bar_sep
+              style_class: "bar-separator"
 
           - nebula/label:
-              id: popup_body
-              text: "This popup appears on the OVERLAY layer."
-              style_class: "popup-content"
+              id: status_label
+              text: "Ready"
+              style_class: "status-label"
+
+# ── Panel (hidden by default) ─────────────────────────
+nebula/panel:
+  id: main_panel
+  style_class: "panel"
+  visible: false
+  anchor: [top]
+  exclusive: false
+  children:
+    - nebula/box:
+        id: panel_content
+        orientation: vertical
+        spacing: 10
+        children:
+          - nebula/label:
+              id: panel_title
+              text: "Control Panel"
+              style_class: "panel-title"
+
+          - nebula/box:
+              id: button_row
+              orientation: horizontal
+              spacing: 8
+              children:
+                - nebula/button:
+                    id: about_btn
+                    label: "About"
+                    style_class: "panel-btn"
+                    on_click: "lua[widget_set_visible('demo_dialog', true)]"
+
+                - nebula/button:
+                    id: reload_btn
+                    label: "Reload"
+                    style_class: "panel-btn"
+                    on_click: "reload_config"
+
+                - nebula/button:
+                    id: close_panel_btn
+                    label: "Close"
+                    style_class: "panel-btn panel-close-btn"
+                    on_click: "toggle_panel_visibility"
+
+          - nebula/separator:
+              id: panel_sep
+              style_class: "panel-separator"
+
+          - nebula/box:
+              id: info_section
+              orientation: horizontal
+              spacing: 12
+              children:
+                - nebula/label:
+                    id: cpu_label
+                    text: "CPU:"
+                    style_class: "info-label"
+
+                - nebula/cpu:
+                    id: panel_cpu
+                    style_class: "cpu-bar"
+                    update_interval: 2
+
+          - nebula/button:
+              id: show_popup_btn
+              label: "Quick Menu \u25BE"
+              style_class: "panel-btn"
+              on_click: "show_quick_menu"
+
+# ── Dialog (overlay, hidden by default) ───────────────
+nebula/dialog:
+  id: demo_dialog
+  style_class: "dialog"
+  blockInput: true
+  visible: false
+  shadow: { color: "#000000", intensity: 0.6 }
+  children:
+    - nebula/box:
+        id: dialog_body
+        orientation: vertical
+        spacing: 12
+        children:
+          - nebula/label:
+              id: dialog_title
+              text: "About NebulaShell"
+              style_class: "dialog-title"
+
+          - nebula/separator:
+              id: dialog_title_sep
+              style_class: "dialog-separator"
+
+          - nebula/label:
+              id: dialog_message
+              text: "NebulaShell v0.1.0\n\nA lightweight Wayland widget framework\nfor Hyprland and wlroots compositors.\n\nBuilt with Vala + GTK4 + Lua."
+              style_class: "dialog-text"
+
+          - nebula/box:
+              id: dialog_buttons
+              orientation: horizontal
+              spacing: 8
+              style_class: "dialog-button-row"
+              children:
+                - nebula/button:
+                    id: dialog_ok
+                    label: "OK"
+                    style_class: "dialog-btn dialog-btn-primary"
+                    on_click: "lua[widget_set_visible('demo_dialog', false)]"
+
+                - nebula/button:
+                    id: dialog_cancel
+                    label: "Cancel"
+                    style_class: "dialog-btn"
+                    on_click: "lua[widget_set_visible('demo_dialog', false)]"
+
+# ── Popup (context menu, shown programmatically) ──────
+nebula/popup:
+  id: quick_menu
+  style_class: "popup"
+  autohide: 5
+  showPointer: false
+  orientation: vertical
+  spacing: 2
+  children:
+    - nebula/button:
+        id: menu_settings
+        label: "Settings"
+        style_class: "menu-item"
+        on_click: "lua[log_info('Settings clicked')]"
+
+    - nebula/button:
+        id: menu_about
+        label: "About"
+        style_class: "menu-item"
+        on_click: "lua[widget_set_visible('demo_dialog', true)]"
+
+    - nebula/separator:
+        id: menu_sep
+        style_class: "menu-separator"
+
+    - nebula/button:
+        id: menu_quit
+        label: "Quit"
+        style_class: "menu-item menu-item-danger"
+        on_click: "quit_application"
 ```
 
 ---
 
 ## Example 5: events.lua with Multiple Handlers
 
-A complete `events.lua` demonstrating all handler patterns.
+A complete `events.lua` demonstrating all handler patterns, including the new `show_quick_menu` and `quit_application` functions.
 
 ```lua
 -- ~/.config/nebula-shell/events.lua
@@ -487,38 +590,35 @@ end
 -- Config Reload
 -- ============================================================
 
---- Request a configuration reload.
+--- Request a configuration reload (placeholder — not yet fully implemented).
 --- @param source_widget string  The ID of the widget that triggered this handler.
 function reload_config(source_widget)
-    log_info("Config reload requested")
-
-    -- TODO: Implement full config reload
-    -- The current version does not support hot-reload of the widget tree.
-    -- This is reserved for a future release.
-    -- For now, log the state of all widgets as a preview.
-    local panel_visible = widget_get_visible("main_panel")
-    local clock_text = widget_get_label("system_clock")
-    log_info("Current state — Panel: " .. tostring(panel_visible)
-             .. ", Clock: " .. clock_text)
+    log_info("Config reload requested (not yet implemented)")
 end
 
 -- ============================================================
--- Custom: Show/Hide CPU Meter on Panel
+-- Quick Menu / Popup
 -- ============================================================
 
---- Toggle the visibility of the panel's CPU meter.
+--- Show a popup menu anchored to the source widget.
+--- Uses widget_set_parent() and popup_widget() to display a Gtk.Popover.
+--- @param source_widget string  The ID of the button that triggered this handler.
+function show_quick_menu(source_widget)
+    local parent = get_widget_by_id(source_widget)
+    if parent == nil then return end
+    widget_set_parent("quick_menu", parent)
+    popup_widget("quick_menu")
+end
+
+-- ============================================================
+-- Quit Application
+-- ============================================================
+
+--- Exit the NebulaShell application cleanly.
 --- @param source_widget string  The ID of the widget that triggered this handler.
-function toggle_panel_cpu(source_widget)
-    local is_visible = widget_get_visible("panel_cpu_meter")
-    widget_set_visible("panel_cpu_meter", not is_visible)
-
-    if not is_visible then
-        widget_set_label("btn_toggle_cpu", "Show CPU")
-    else
-        widget_set_label("btn_toggle_cpu", "Hide CPU")
-    end
-
-    log_info("Panel CPU meter visibility: " .. tostring(not is_visible))
+function quit_application(source_widget)
+    log_info("Quit requested")
+    os.exit(0)
 end
 
 -- ============================================================
@@ -528,17 +628,6 @@ end
 --- Runs once when events.lua is first loaded.
 --- Use this for one-time setup, validation, or logging.
 log_info("events.lua loaded successfully — " .. os.date("%Y-%m-%d %H:%M:%S"))
-
--- ============================================================
--- Popup Demo
--- ============================================================
-
---- Close the demo popup.
---- @param source_widget string  The ID of the widget that triggered this handler.
-function close_demo_popup(source_widget)
-    widget_set_visible("demo_popup", false)
-    log_info("Popup closed")
-end
 ```
 
 ---
@@ -684,45 +773,88 @@ nebula/bar:
     margin: 2px 4px;
 }
 
-/* Popup widget */
-.popup {
+/* Dialog widget */
+.dialog {
     background: rgba(30, 30, 40, 0.97);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 8px;
     padding: 12px;
 }
 
-.popup-overlay {
-    background: rgba(0, 0, 0, 0.4);
+/* Dynamic shadow backdrop (styled by CssProvider from shadow config) */
+shadow {
+    background: alpha(#000000, 0.6);
 }
 
-.popup-title {
+.dialog-title {
     font-size: 16px;
     font-weight: bold;
     color: #e5e5e5;
     padding: 4px 8px;
 }
 
-.popup-close-btn {
-    padding: 4px 12px;
-    border-radius: 4px;
+.dialog-close-btn {
+    min-width: 28px;
+    min-height: 28px;
+    border-radius: 14px;
+    padding: 2px 8px;
     background: rgba(255, 255, 255, 0.06);
     color: #abb2bf;
+    font-size: 14px;
 }
 
-.popup-close-btn:hover {
+.dialog-close-btn:hover {
     background: rgba(255, 255, 255, 0.12);
 }
 
-.popup-content {
+.dialog-text {
     padding: 8px;
     color: #abb2bf;
 }
 
-.popup-separator {
+.dialog-separator {
     background: rgba(255, 255, 255, 0.08);
     min-height: 1px;
     margin: 6px 0;
+}
+
+.dialog-btn {
+    padding: 6px 16px;
+    border-radius: 4px;
+}
+
+.dialog-btn-primary {
+    background: #5294e2;
+    color: #ffffff;
+}
+
+/* Popup/menu styling */
+.popup {
+    background: rgba(40, 40, 50, 0.98);
+    border: 1px solid #555555;
+    border-radius: 6px;
+    padding: 4px;
+}
+
+.menu-item {
+    padding: 6px 16px;
+    border-radius: 4px;
+    background: transparent;
+    color: #abb2bf;
+}
+
+.menu-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-item-danger {
+    color: #e06c75;
+}
+
+.menu-separator {
+    background: rgba(255, 255, 255, 0.08);
+    min-height: 1px;
+    margin: 4px 8px;
 }
 ```
 
@@ -765,7 +897,7 @@ nebula/bar:
                     style_class: "status-text"
                     text: "Ready"
 
-          # Right section: clock + system tray
+          # Right section: clock + CPU
           - nebula/box:
               id: right_group
               style_class: "right-group"
@@ -796,81 +928,248 @@ The three `nebula/box` containers (`left`, `center`, `right`) act as flex-like s
 
 ---
 
-## Example 8: Popup Widget
+## Example 8: Dialog Widget
 
-A centered popup widget with a semi-transparent backdrop overlay.
+A modal dialog widget with a shadow backdrop that blocks input behind it. The dialog uses the layer-shell `OVERLAY` layer to float above all other surfaces.
 
 ### config.yaml
 
 ```yaml
-nebula/popup:
-  id: info_popup
-  style_class: "popup"
-  anchor: center
-  size: {w: 480, h: 320}
+nebula/dialog:
+  id: info_dialog
+  style_class: "dialog"
+  blockInput: true
   visible: true
-  overlay:
-    intensity: 5
-  margin:
-    all: 16
-  padding:
-    all: 8
+  shadow:
+    color: "#000000"
+    intensity: 0.6
   children:
     - nebula/box:
-        id: popup_root
+        id: dialog_root
         orientation: vertical
         spacing: 10
         children:
-          - nebula/box:
-              id: popup_header
-              orientation: horizontal
-              spacing: 0
-              children:
-                - nebula/label:
-                    id: popup_title
-                    text: "Information"
-                    style_class: "popup-title"
-
-                - nebula/box:
-                    id: header_spacer
-                    orientation: horizontal
-
-                - nebula/button:
-                    id: close_btn
-                    label: "\u{2715}"
-                    style_class: "popup-close-btn"
-                    on_click: "close_info_popup"
+          - nebula/label:
+              id: dialog_title
+              text: "Information"
+              style_class: "dialog-title"
 
           - nebula/separator:
               id: header_sep
-              style_class: "popup-separator"
+              style_class: "dialog-separator"
+
+          - nebula/label:
+              id: body_text
+              text: "This dialog has:\n- A shadow backdrop (60% intensity)\n- blockInput: true (modal, blocks clicks behind)\n- A built-in close button (top-right ×)\n- Layer-shell OVERLAY layer (above bars)"
+              style_class: "dialog-text"
 
           - nebula/box:
-              id: popup_body
+              id: dialog_buttons
               orientation: horizontal
               spacing: 8
-              style_class: "popup-content"
               children:
-                - nebula/label:
-                    id: body_text
-                    text: "This popup has:\n- A backdrop overlay (intensity 5)\n- 16px margin from screen edges\n- 8px inner padding\n- A close button in the header\n- Explicit size (480x320)"
+                - nebula/button:
+                    id: close_btn
+                    label: "Close"
+                    on_click: "lua[widget_set_visible('info_dialog', false)]"
+```
+
+### What it does
+
+1. Creates a layer-shell `Gtk.Window` on the `OVERLAY` layer with **no anchors** and **no exclusive zone** — it floats centered above all other surfaces.
+2. A shadow backdrop (`Gtk.Box` with CSS name `"shadow"`) fills the window behind the content. The color and intensity are dynamically generated from `shadow.color` and `shadow.intensity`.
+3. `blockInput: true` sets the window as modal, blocking interaction with other windows.
+4. A built-in close button (round ×) is automatically placed in the top-right corner — you do not need to add one in your YAML. Style it with the `dialog-close-btn` CSS class.
+5. No separate backdrop window is created; the shadow is part of the dialog's internal `Gtk.Overlay`.
+
+## Example 9: Popup / Popover Widget
+
+A popup that appears as a child of a button, useful for dropdown menus, tooltips, or quick info panels. Popups use `widget_set_parent()` and `popup_widget()` to anchor to a trigger widget.
+
+### config.yaml
+
+```yaml
+nebula/bar:
+  id: main_bar
+  style_class: "bar"
+  anchor: [top]
+  exclusive: true
+  children:
+    - nebula/button:
+        id: info_btn
+        label: "Info"
+        style_class: "info-btn"
+        on_click: "show_quick_menu"
+
+    - nebula/clock:
+        id: system_clock
+        style_class: "clock"
+        format: "%H:%M:%S"
+
+nebula/popup:
+  id: info_popup
+  style_class: "popup"
+  autohide: 5
+  showPointer: false
+  orientation: vertical
+  spacing: 4
+  children:
+    - nebula/button:
+        id: popup_title_btn
+        label: "System Info"
+        style_class: "popup-title"
+        on_click: "lua[log_info('System Info clicked')]"
+
+    - nebula/separator:
+        id: popup_sep
+        style_class: "popup-sep"
+
+    - nebula/label:
+        id: popup_body
+        text: "CPU: 23%\nMemory: 4.2 GB\nUptime: 2h 14m"
+        style_class: "popup-body"
+
+    - nebula/button:
+        id: popup_quit_btn
+        label: "Quit"
+        style_class: "popup-quit-btn"
+        on_click: "quit_application"
 ```
 
 ### events.lua
 
 ```lua
-function close_info_popup(source_widget)
-    widget_set_visible("info_popup", false)
-    log_info("Info popup closed")
+--- Show popup anchored to the source button.
+--- Uses widget_set_parent() + popup_widget() — the new Lua API.
+function show_quick_menu(source_widget)
+    local parent = get_widget_by_id(source_widget)
+    if parent == nil then return end
+    widget_set_parent("info_popup", parent)
+    popup_widget("info_popup")
 end
+
+--- Quit the application cleanly.
+function quit_application(source_widget)
+    log_info("Quit requested")
+    os.exit(0)
+end
+```
+
+### style.css
+
+```css
+.popup {
+    background: rgba(40, 40, 50, 0.98);
+    border: 1px solid #555555;
+    border-radius: 6px;
+    padding: 4px;
+    min-width: 200px;
+}
+
+.popup-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #ffffff;
+    padding: 4px;
+    background: transparent;
+    border: none;
+}
+
+.popup-body {
+    font-size: 12px;
+    color: #abb2bf;
+    padding: 4px 8px;
+    line-height: 1.5;
+}
+
+.popup-sep {
+    background: rgba(255, 255, 255, 0.08);
+    min-height: 1px;
+    margin: 4px 0;
+}
+
+.popup-quit-btn {
+    padding: 6px 12px;
+    border-radius: 4px;
+    background: transparent;
+    color: #e06c75;
+}
+
+.popup-quit-btn:hover {
+    background: rgba(224, 108, 117, 0.15);
+}
 ```
 
 ### What it does
 
-1. Creates a window on the `OVERLAY` layer (topmost layer, above all other windows).
-2. Creates a backdrop window on the `TOP` layer that covers the full screen.
-3. The backdrop has `intensity: 5` which translates to 50% opacity black overlay.
-4. The popup has 16px margin from screen edges and 8px inner padding.
+1. Creates a `Gtk.Popover` that is anchored to the trigger button (`info_btn`) at runtime via `widget_set_parent()`.
+2. `showPointer: false` hides the arrow pointer for a flat dropdown appearance.
+3. `autohide: 5` automatically closes the popover after 5 seconds.
+4. `orientation: vertical` and `spacing: 4` lay out children in a vertical column with 4px gaps.
+5. The popover follows the button's position on screen — if the bar moves, the popover moves with it.
+6. Popovers are lightweight — they don't create separate Wayland surfaces.
+7. `Registry.show_all()` skips `Gtk.Popover` widgets, so popups remain hidden until shown explicitly.
+
+---
+
+## Example 10: Multi-Type Commands
+
+Demonstrates the three command types (`events[]`, `lua[]`, `bash[]`) and array composition on `on_click`.
+
+### config.yaml
+
+```yaml
+nebula/bar:
+  id: main_bar
+  style_class: "bar"
+  anchor: [top]
+  children:
+    - nebula/button:
+        id: multi_action_btn
+        label: "Do All"
+        style_class: "action-btn"
+        on_click:
+          - "events[toggle_panel_visibility]"
+          - "lua[widget_set_label(\"status_label\", \"Action triggered!\")]"
+          - "bash[notify-send 'NebulaShell' 'Multi-action button clicked']"
+
+    - nebula/label:
+        id: status_label
+        style_class: "status-label"
+        text: "Ready"
+```
+
+### events.lua
+
+```lua
+function toggle_panel_visibility(source_widget)
+    local is_visible = widget_get_visible("main_panel")
+    widget_set_visible("main_panel", not is_visible)
+    log_info("Panel visibility toggled by multi-type command")
+end
+```
+
+### What happens when you click "Do All"
+
+1. **`events[toggle_panel_visibility]`** — Calls the global Lua function (defined in `events.lua`) with the widget ID as argument. The panel visibility toggles.
+2. **`lua[widget_set_label("status_label", "Action triggered!")]`** — Executes the inline Lua, updating the status label text.
+3. **`bash[notify-send 'NebulaShell' 'Multi-action button clicked']`** — Runs a shell command asynchronously, showing a desktop notification.
+
+Commands execute in order. If one fails (e.g., a Lua error or missing function), the remaining commands still run.
+
+### Backward Compatibility
+
+Existing configs using plain string `on_click` continue to work:
+
+```yaml
+# Phase 2 style — still works
+on_click: "toggle_panel_visibility"
+
+# Equivalent Phase 3 style
+on_click: "events[toggle_panel_visibility]"
+```
+
+The framework automatically treats un-prefixed strings as `events[...]`.
 
 ---
 
@@ -883,6 +1182,8 @@ end
 | 1 (dev)  | `$NEBULA_SYSROOT/etc/nebula-shell/styles/style.css` |
 | 2 (user) | `~/.config/nebula-shell/styles/style.css`           |
 | 3 (sys)  | `/etc/nebula-shell/styles/style.css`                 |
+
+> **Note:** CSS is loaded **before** widget building, ensuring styles are applied when widgets first appear.
 
 ### CSS class naming
 
@@ -951,10 +1252,46 @@ widget_remove_css_class("cpu_meter", "warning")
 }
 ```
 
-**Popup backdrop:**
+**Dialog shadow backdrop:**
 ```css
-.popup-overlay {
-    background: rgba(0, 0, 0, 0.4);
+.dialog {
+    background: rgba(30, 30, 40, 0.97);
+    border: 1px solid #555555;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+shadow {
+    background: alpha(#000000, 0.5);
+}
+
+.dialog-close-btn {
+    min-width: 28px;
+    min-height: 28px;
+    border-radius: 14px;
+}
+```
+
+**Popup menu:**
+```css
+.popup {
+    background: rgba(40, 40, 50, 0.98);
+    border: 1px solid #555555;
+    border-radius: 6px;
+    padding: 4px;
+}
+
+.menu-item {
+    padding: 6px 16px;
+    border-radius: 4px;
+}
+
+.menu-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-item-danger {
+    color: #e06c75;
 }
 ```
 
@@ -981,6 +1318,10 @@ nebula-shell run
 
 # Quit a running instance
 nebula-shell quit
+
+# Toggle a widget's visibility (show/hide)
+nebula-shell toggle main_panel
+nebula-shell toggle demo_dialog
 
 # Inspect running widgets
 nebula-shell inspect --tree

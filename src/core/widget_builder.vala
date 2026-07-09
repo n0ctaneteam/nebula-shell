@@ -2,12 +2,10 @@ namespace NebulaShell {
     public class WidgetBuilder : Object {
         private LuaBridge lua_bridge;
         private HashTable<string, uint> timers;
-        private HashTable<string, Gtk.Window> backdrops;
 
         public WidgetBuilder(LuaBridge bridge) {
             lua_bridge = bridge;
             timers = new HashTable<string, uint>(str_hash, str_equal);
-            backdrops = new HashTable<string, Gtk.Window>(str_hash, str_equal);
         }
 
         public void build_from_config() {
@@ -27,6 +25,12 @@ namespace NebulaShell {
                 if (key == null) continue;
                 lua_bridge.get_field(-1, key);
                 if (lua_bridge.is_table(-1)) {
+                    // Skip dialogs — built on-demand via show_dialog()
+                    if (key.has_suffix("/dialog")) {
+                        Logger.info(@"Deferred dialog: $(key)");
+                        lua_bridge.pop();
+                        continue;
+                    }
                     Logger.info(@"Building widget: $(key)");
                     create_widget_from_lua(key, -1);
                 }
@@ -96,6 +100,12 @@ namespace NebulaShell {
                 id = "%s_%p".printf(widget_type.replace("/", "_"), this);
             }
 
+            // Store config in _nebula_widget_configs for lifecycle management
+            lua_bridge.get_global("register_widget");
+            lua_bridge.push_string(id);
+            lua_bridge.push_value(-3);
+            lua_bridge.call(2, 0);
+
             Gtk.Widget? widget = create_gtk_widget(id, widget_type_str);
 
             if (widget == null) {
@@ -129,48 +139,60 @@ namespace NebulaShell {
             bool widget_visible = read_visible_field();
 
             if (widget is Gtk.Window) {
-                // Always init layer-shell for window widgets (even with empty anchors, e.g. "center")
-                if (!LayerShell.init_window((Gtk.Window) widget, anchors, exclusive, layer)) {
-                    Logger.warning(@"Widget '$(id)': LayerShell not available, falling back to normal window");
-                }
+                var win = (Gtk.Window) widget;
+                bool is_dialog = win.get_data<bool>("_is_dialog");
+                bool no_layer = !is_dialog && win.get_data<Gtk.Window>("no-layer") != null;
 
-                // Apply margin (must happen AFTER init_window for layer-shell margins to work)
-                if (margin_edges != null) {
-                    GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.TOP, int.parse(margin_edges[0]));
-                    GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.BOTTOM, int.parse(margin_edges[1]));
-                    GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.LEFT, int.parse(margin_edges[2]));
-                    GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.RIGHT, int.parse(margin_edges[3]));
-                }
-
-                // Apply size
-                if (size_mode == "fill") {
-                    // Fill: anchor to all 4 edges — already handled by anchors if [top,bottom,left,right]
+                if (is_dialog) {
+                    // Dialog handles its own container properties in its case block
+                } else if (no_layer) {
+                    // Regular window — apply margins as widget margins, skip layer-shell
+                    if (margin_edges != null) {
+                        win.set_margin_top(int.parse(margin_edges[0]));
+                        win.set_margin_bottom(int.parse(margin_edges[1]));
+                        win.set_margin_start(int.parse(margin_edges[2]));
+                        win.set_margin_end(int.parse(margin_edges[3]));
+                    }
+                    if (padding_edges != null) {
+                        win.set_margin_top(int.parse(padding_edges[0]) + (margin_edges != null ? int.parse(margin_edges[0]) : 0));
+                        win.set_margin_bottom(int.parse(padding_edges[1]) + (margin_edges != null ? int.parse(margin_edges[1]) : 0));
+                        win.set_margin_start(int.parse(padding_edges[2]) + (margin_edges != null ? int.parse(margin_edges[2]) : 0));
+                        win.set_margin_end(int.parse(padding_edges[3]) + (margin_edges != null ? int.parse(margin_edges[3]) : 0));
+                    }
                 } else {
-                    int? w = null, h = null;
-                    parse_explicit_size(out w, out h);
-                    if (w != null && h != null) {
-                        ((Gtk.Window) widget).set_default_size(w, h);
-                    } else if (h != null) {
-                        ((Gtk.Window) widget).set_default_size(800, h);
+                    if (!LayerShell.init_window(win, anchors, exclusive, layer)) {
+                        Logger.warning(@"Widget '$(id)': LayerShell not available, falling back to normal window");
+                    }
+
+                    // Apply margin (must happen AFTER init_window for layer-shell margins to work)
+                    if (margin_edges != null) {
+                        GtkLayerShell.set_margin(win, GtkLayerShell.Edge.TOP, int.parse(margin_edges[0]));
+                        GtkLayerShell.set_margin(win, GtkLayerShell.Edge.BOTTOM, int.parse(margin_edges[1]));
+                        GtkLayerShell.set_margin(win, GtkLayerShell.Edge.LEFT, int.parse(margin_edges[2]));
+                        GtkLayerShell.set_margin(win, GtkLayerShell.Edge.RIGHT, int.parse(margin_edges[3]));
+                    }
+
+                    // Apply padding (for windows — use margin equivalent)
+                    if (padding_edges != null) {
+                        GtkLayerShell.set_margin(win, GtkLayerShell.Edge.TOP, int.parse(padding_edges[0]));
+                        GtkLayerShell.set_margin(win, GtkLayerShell.Edge.BOTTOM, int.parse(padding_edges[1]));
+                        GtkLayerShell.set_margin(win, GtkLayerShell.Edge.LEFT, int.parse(padding_edges[2]));
+                        GtkLayerShell.set_margin(win, GtkLayerShell.Edge.RIGHT, int.parse(padding_edges[3]));
                     }
                 }
 
-                // Popup overlay backdrop
-                bool has_overlay = get_lua_field_bool("_has_overlay");
-                if (has_overlay) {
-                    create_popup_backdrop(id, (Gtk.Window) widget);
-                }
-
-                // Apply padding (for windows — use margin equivalent)
-                if (padding_edges != null) {
-                    GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.TOP,
-                        int.parse(padding_edges[0]));
-                    GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.BOTTOM,
-                        int.parse(padding_edges[1]));
-                    GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.LEFT,
-                        int.parse(padding_edges[2]));
-                    GtkLayerShell.set_margin((Gtk.Window) widget, GtkLayerShell.Edge.RIGHT,
-                        int.parse(padding_edges[3]));
+                // Apply size — skip for dialogs (handled in case block)
+                if (!is_dialog) {
+                    if (size_mode == "fill") {
+                    } else {
+                        int? w = null, h = null;
+                        parse_explicit_size(out w, out h);
+                        if (w != null && h != null) {
+                            win.set_default_size(w, h);
+                        } else if (h != null) {
+                            win.set_default_size(800, h);
+                        }
+                    }
                 }
             } else {
                 // Apply margin and padding to non-window widgets
@@ -196,11 +218,16 @@ namespace NebulaShell {
                 setup_timer(id, timer_interval);
             }
 
-            string? on_click_func_name = get_lua_field_string("on_click");
-            if (on_click_func_name != null && widget is Gtk.Button) {
+            // Multi-type command handler — supports events[], lua[], bash[] and backward compat
+            var event_cmds = parse_commands("on_click");
+            if (event_cmds.length > 0 && widget is Gtk.Button) {
+                string captured_id = id;
                 var btn = (Gtk.Button) widget;
-                setup_click_handler(btn, id, on_click_func_name);
+                btn.clicked.connect(() => {
+                    execute_commands(event_cmds, captured_id);
+                });
             } else if (widget is Gtk.Button) {
+                // Fallback: Lua closure dispatch (_on_click from programmatic widgets)
                 lua_bridge.get_field(-1, "_on_click");
                 if (lua_bridge.is_function(-1)) {
                     string captured_id = id;
@@ -236,9 +263,21 @@ namespace NebulaShell {
                     build_children((Gtk.Box) widget);
                 } else if (widget is Gtk.Window) {
                     var win = (Gtk.Window) widget;
-                    var child = win.get_child();
-                    if (child is Gtk.Box) {
-                        build_children((Gtk.Box) child);
+                    // Check if it's a dialog with a stored dialog-box
+                    var dialog_box = win.get_data<Gtk.Box>("dialog-box");
+                    if (dialog_box != null) {
+                        build_children(dialog_box);
+                    } else {
+                        var child = win.get_child();
+                        if (child is Gtk.Box) {
+                            build_children((Gtk.Box) child);
+                        }
+                    }
+                } else if (widget is Gtk.Popover) {
+                    var popover = (Gtk.Popover) widget;
+                    var child_widget = popover.get_child();
+                    if (child_widget is Gtk.Box) {
+                        build_children((Gtk.Box) child_widget);
                     }
                 }
                 lua_bridge.pop();
@@ -248,6 +287,81 @@ namespace NebulaShell {
 
             lua_bridge.pop();
             Logger.info(@"Built widget: $(widget_type) (id: $(id))");
+            return widget;
+        }
+
+        public Gtk.Widget? build_widget_from_config(string widget_type, string widget_id) {
+            lua_bridge.get_global("_nebula_widget_configs");
+            if (!lua_bridge.is_table(-1)) {
+                lua_bridge.pop();
+                return null;
+            }
+
+            lua_bridge.get_field(-1, widget_id);
+            if (!lua_bridge.is_table(-1)) {
+                lua_bridge.pop(2);
+                return null;
+            }
+
+            // Config is at -1, _nebula_widget_configs at -2
+            // Verify type matches
+            string? config_type = null;
+            lua_bridge.get_field(-1, "_type");
+            config_type = lua_bridge.get_string(-1);
+            lua_bridge.pop();
+
+            if (config_type != widget_type) {
+                lua_bridge.pop(2);
+                Logger.warning(@"build_widget_from_config: type mismatch for '$(widget_id)'");
+                return null;
+            }
+
+            Gtk.Widget? widget = create_gtk_widget(widget_id, config_type);
+            if (widget == null) {
+                Logger.error(@"build_widget_from_config: failed to create GTK widget for '$(widget_id)'");
+                lua_bridge.pop(2);
+                return null;
+            }
+
+            Registry.register(widget_id, widget);
+
+            // Apply CSS classes
+            string? style_class = get_lua_field_string("style_class");
+            if (style_class != null) {
+                string[] classes = style_class.split(" ");
+                foreach (var cls in classes) {
+                    if (cls.strip().length > 0) {
+                        widget.add_css_class(cls.strip());
+                    }
+                }
+            }
+
+            widget.set_visible(true);
+
+            lua_bridge.pop(2); // pop config + _nebula_widget_configs
+            Logger.info(@"Runtime built widget: $(widget_type) (id: $(widget_id))");
+            return widget;
+        }
+
+        public Gtk.Widget? build_dialog_from_config(string widget_type, string widget_id) {
+            if (!lua_bridge.get_global("_nebula_config")) return null;
+
+            lua_bridge.get_field(-1, widget_type);
+            if (!lua_bridge.is_table(-1)) {
+                lua_bridge.pop(2);
+                Logger.warning(@"build_dialog_from_config: no config for '$(widget_type)'");
+                return null;
+            }
+
+            Gtk.Widget? widget = create_widget_from_lua(widget_type, -1);
+            if (widget == null) {
+                Logger.error(@"build_dialog_from_config: failed to create widget for '$(widget_id)'");
+                lua_bridge.pop(2);
+                return null;
+            }
+
+            lua_bridge.pop(); // pop _nebula_config
+            Logger.info(@"Runtime built dialog: $(widget_type) (id: $(widget_id))");
             return widget;
         }
 
@@ -298,6 +412,251 @@ namespace NebulaShell {
                     var box = new Gtk.Box(orient, spacing > 0 ? spacing : 0);
                     win.set_child(box);
                     return win;
+                }
+
+                case "dialog": {
+                    var win = new Gtk.Window();
+                    win.set_decorated(false);
+                    string captured_id = id;
+
+                    // Parse fields
+                    string title_text = get_lua_field_string("title") ?? "";
+                    string content_text = get_lua_field_string("content") ?? "";
+                    bool block_input = get_lua_field_bool("blockInput");
+
+                    // Backdrop + overlay for centered dialog-surface
+                    var overlay = new Gtk.Overlay();
+
+                    // Backdrop — captures clicks outside the dialog surface
+                    var backdrop = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
+                    backdrop.set_hexpand(true);
+                    backdrop.set_vexpand(true);
+
+                    if (block_input) {
+                        var click_ctrl = new Gtk.GestureClick();
+                        click_ctrl.set_button(0);
+                        click_ctrl.pressed.connect(() => {
+                            click_ctrl.set_state(Gtk.EventSequenceState.CLAIMED);
+                        });
+                        backdrop.add_controller(click_ctrl);
+                    }
+
+                    overlay.set_child(backdrop);
+
+                    // Dialog surface (centered popup box)
+                    var dialog_surface = new Gtk.Box(Gtk.Orientation.VERTICAL, 8);
+                    dialog_surface.set_halign(Gtk.Align.CENTER);
+                    dialog_surface.set_valign(Gtk.Align.CENTER);
+                    dialog_surface.add_css_class("dialog-box");
+
+                    // Title
+                    var title_label = new Gtk.Label(title_text);
+                    title_label.add_css_class("dialog-title");
+                    title_label.set_xalign(0.0f);
+
+                    // Content
+                    var content_label = new Gtk.Label(content_text);
+                    content_label.add_css_class("dialog-content");
+                    content_label.set_wrap(true);
+                    content_label.set_xalign(0.0f);
+                    content_label.set_max_width_chars(60);
+
+                    // Button row
+                    var button_row = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 8);
+                    button_row.set_halign(Gtk.Align.END);
+                    button_row.add_css_class("dialog-buttons");
+
+                    // Parse buttons
+                    lua_bridge.get_field(-1, "buttons");
+                    if (lua_bridge.is_table(-1)) {
+                        unowned var L = lua_bridge.get_L();
+                        ulong btn_count = Lua.lua_rawlen(L, -1);
+                        for (int i = 1; i <= (int) btn_count; i++) {
+                            Lua.lua_rawgeti(L, -1, i);
+                            if (Lua.lua_type(L, -1) == Lua.TTABLE) {
+                                Lua.lua_pushnil(L);
+                                while (Lua.lua_next(L, -2) != 0) {
+                                    string? btn_id = Lua.lua_tostring(L, -2);
+                                    if (btn_id == null || Lua.lua_type(L, -1) != Lua.TTABLE) {
+                                        Lua.lua_pop(L, 1);
+                                        continue;
+                                    }
+
+                                    string btn_label = btn_id;
+                                    Lua.lua_getfield(L, -1, "label");
+                                    string? lbl = Lua.lua_tostring(L, -1);
+                                    if (lbl != null) btn_label = lbl;
+                                    Lua.lua_pop(L, 1);
+
+                                    bool is_critical = (btn_id == "cancel");
+                                    Lua.lua_getfield(L, -1, "isCritical");
+                                    if (Lua.lua_type(L, -1) == Lua.TBOOLEAN) {
+                                        is_critical = Lua.lua_toboolean(L, -1) != 0;
+                                    }
+                                    Lua.lua_pop(L, 1);
+
+                                    bool has_explicit_onclick = false;
+                                    Lua.lua_getfield(L, -1, "on_click");
+                                    has_explicit_onclick = Lua.lua_type(L, -1) != Lua.TNIL;
+                                    Lua.lua_pop(L, 1);
+
+                                    var btn = new Gtk.Button.with_label(btn_label);
+                                    btn.add_css_class("dialog-button");
+                                    btn.add_css_class(btn_id);
+                                    if (is_critical) {
+                                        btn.add_css_class("critical");
+                                    }
+
+                                    string captured_btn_id = captured_id;
+                                    if (btn_id == "cancel" && !has_explicit_onclick) {
+                                        btn.clicked.connect(() => {
+                                            Registry.remove(captured_btn_id);
+                                            Lua.lua_getglobal(L, "_nebula_widget_configs");
+                                            if (Lua.lua_type(L, -1) == Lua.TTABLE) {
+                                                Lua.lua_pushnil(L);
+                                                Lua.lua_setfield(L, -2, captured_btn_id);
+                                            }
+                                            Lua.lua_pop(L, 1);
+                                        });
+                                    } else {
+                                        var cmds = parse_commands("on_click");
+                                        if (cmds.length > 0) {
+                                            btn.clicked.connect(() => {
+                                                execute_commands(cmds, captured_btn_id);
+                                            });
+                                        }
+                                    }
+
+                                    button_row.append(btn);
+                                    Lua.lua_pop(L, 1); // pop value
+                                }
+                            }
+                            Lua.lua_pop(L, 1); // pop entry table
+                        }
+                    }
+                    lua_bridge.pop(); // pop buttons table
+
+                    // Size and padding use inner wrapper; margin applies to dialog-surface
+                    string[]? margin_edges = parse_margin_padding("margin");
+                    string[]? padding_edges = parse_margin_padding("padding");
+
+                    var content_wrap = new Gtk.Box(Gtk.Orientation.VERTICAL, 8);
+                    content_wrap.append(title_label);
+                    content_wrap.append(content_label);
+                    content_wrap.append(button_row);
+
+                    if (padding_edges != null) {
+                        content_wrap.set_margin_top(int.parse(padding_edges[0]));
+                        content_wrap.set_margin_bottom(int.parse(padding_edges[1]));
+                        content_wrap.set_margin_start(int.parse(padding_edges[2]));
+                        content_wrap.set_margin_end(int.parse(padding_edges[3]));
+                    }
+
+                    dialog_surface.append(content_wrap);
+
+                    if (margin_edges != null) {
+                        dialog_surface.set_margin_top(int.parse(margin_edges[0]));
+                        dialog_surface.set_margin_bottom(int.parse(margin_edges[1]));
+                        dialog_surface.set_margin_start(int.parse(margin_edges[2]));
+                        dialog_surface.set_margin_end(int.parse(margin_edges[3]));
+                    }
+
+                    overlay.add_overlay(dialog_surface);
+                    win.set_child(overlay);
+
+                    // Mark as dialog so generic container properties skip
+                    win.set_data("_is_dialog", true);
+
+                    // Apply size to dialog-surface (not window)
+                    lua_bridge.get_field(-1, "size");
+                    if (lua_bridge.is_table(-1)) {
+                        Lua.lua_getfield(lua_bridge.get_L(), -1, "w");
+                        int? sw = (int?) lua_bridge.get_number(-1) ?? null;
+                        Lua.lua_pop(lua_bridge.get_L(), 1);
+                        Lua.lua_getfield(lua_bridge.get_L(), -1, "h");
+                        int? sh = (int?) lua_bridge.get_number(-1) ?? null;
+                        Lua.lua_pop(lua_bridge.get_L(), 1);
+                        if (sw != null && sh != null) {
+                            dialog_surface.set_size_request(sw, sh);
+                        }
+                    }
+                    lua_bridge.pop(); // pop size
+
+                    // Layer-shell: full-screen (defaults to overlay)
+                    string[] full_anchors = { "top", "bottom", "left", "right" };
+                    GtkLayerShell.Layer dialog_layer = parse_layer();
+                    LayerShell.init_window(win, full_anchors, false, dialog_layer);
+                    GtkLayerShell.set_margin(win, GtkLayerShell.Edge.TOP, 0);
+                    GtkLayerShell.set_margin(win, GtkLayerShell.Edge.BOTTOM, 0);
+                    GtkLayerShell.set_margin(win, GtkLayerShell.Edge.LEFT, 0);
+                    GtkLayerShell.set_margin(win, GtkLayerShell.Edge.RIGHT, 0);
+
+                    return win;
+                }
+
+                case "popover": {
+                    var popover = new Gtk.Popover();
+                    popover.set_has_arrow(get_lua_field_bool("showPointer"));
+
+                    bool hovered = false;
+                    var motion_ctrl = new Gtk.EventControllerMotion();
+                    double autohide = get_lua_field_double("autohide");
+                    uint? pending_timer = null;
+
+                    GLib.SourceFunc schedule_autohide = () => {
+                        if (pending_timer != null) {
+                            GLib.Source.remove(pending_timer);
+                            pending_timer = null;
+                        }
+                        if (autohide > 0 && popover.get_visible()) {
+                            uint timeout_ms = (uint)(autohide * 1000);
+                            pending_timer = GLib.Timeout.add(timeout_ms, () => {
+                                pending_timer = null;
+                                if (!hovered) {
+                                    popover.popdown();
+                                }
+                                return false;
+                            });
+                        }
+                        return false;
+                    };
+
+                    motion_ctrl.enter.connect(() => {
+                        hovered = true;
+                        if (pending_timer != null) {
+                            GLib.Source.remove(pending_timer);
+                            pending_timer = null;
+                        }
+                    });
+                    motion_ctrl.leave.connect(() => {
+                        hovered = false;
+                        schedule_autohide();
+                    });
+                    ((Gtk.Widget) popover).add_controller(motion_ctrl);
+
+                    if (autohide > 0) {
+                        popover.notify["visible"].connect(() => {
+                            if (popover.get_visible()) {
+                                schedule_autohide();
+                            }
+                        });
+
+                        popover.destroy.connect(() => {
+                            if (pending_timer != null) {
+                                GLib.Source.remove(pending_timer);
+                                pending_timer = null;
+                            }
+                        });
+                    }
+
+                    int spacing = (int) get_lua_field_double("_spacing");
+                    string? orient_str = get_lua_field_string("_orientation");
+                    Gtk.Orientation orient = (orient_str == "vertical")
+                        ? Gtk.Orientation.VERTICAL
+                        : Gtk.Orientation.HORIZONTAL;
+                    var popover_box = new Gtk.Box(orient, spacing > 0 ? spacing : 0);
+                    popover.set_child(popover_box);
+                    return popover;
                 }
 
                 default:
@@ -429,89 +788,166 @@ namespace NebulaShell {
             return { top.to_string(), bottom.to_string(), left.to_string(), right.to_string() };
         }
 
-        private Gtk.Window? create_popup_backdrop(string popup_id, Gtk.Window popup_window) {
-            string backdrop_id = @"$(popup_id)_backdrop";
-            var backdrop = new Gtk.Window();
-            backdrop.set_child(new Gtk.Label("")); // empty content
-            backdrop.add_css_class("popup-overlay");
-
-            // Anchor to all 4 edges = full screen
-            var anchors = new string[] { "top", "bottom", "left", "right" };
-            if (!LayerShell.init_window(backdrop, anchors, false, GtkLayerShell.Layer.TOP)) {
-                Logger.warning("Cannot create popup backdrop — LayerShell unavailable");
-                return null;
-            }
-
-            // Get intensity from config
-            lua_bridge.get_field(-1, "overlay");
-            if (lua_bridge.is_table(-1)) {
-                lua_bridge.get_field(-1, "intensity");
-                double intensity = lua_bridge.get_number(-1) ?? 4.0;
-                lua_bridge.pop();
-                lua_bridge.pop();
-                double opacity = 0.1 * intensity;
-                string css_id = @"overlay-$(popup_id)";
-                backdrop.add_css_class(css_id);
-                apply_css(backdrop, @"opacity: $(opacity); background: rgba(0,0,0,$((int)(opacity * 255)));", css_id);
-            } else {
-                lua_bridge.pop();
-            }
-
-            // Sync visibility with popup
-            backdrop.set_visible(popup_window.get_visible());
-            popup_window.notify["visible"].connect(() => {
-                backdrop.set_visible(popup_window.get_visible());
-            });
-
-            // Close backdrop when popup closes
-            popup_window.close_request.connect(() => {
-                backdrop.set_visible(false);
-                backdrop.destroy();
-                return false;
-            });
-
-            Registry.register(backdrop_id, backdrop);
-            backdrops.insert(popup_id, backdrop);
-            return backdrop;
+        private struct Command {
+            string type;
+            string body;
         }
 
-        public void destroy_backdrop(string popup_id) {
-            var bd = backdrops.lookup(popup_id);
-            if (bd != null) {
-                bd.set_visible(false);
-                bd.destroy();
-                backdrops.remove(popup_id);
-            }
-        }
+        private Command[] parse_commands(string field_name) {
+            Command[] result = {};
+            unowned var L = lua_bridge.get_L();
 
-        private void apply_css(Gtk.Widget widget, string css_text, string class_name) {
-            try {
-                var provider = new Gtk.CssProvider();
-                widget.add_css_class(class_name);
-                string rule = ".%s { %s }".printf(class_name, css_text);
-                provider.load_from_data(rule.data);
-                var display = widget.get_display();
-                if (display != null) {
-                    Gtk.StyleContext.add_provider_for_display(display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+            if (!lua_bridge.get_field(-1, field_name)) {
+                lua_bridge.pop();
+                return result;
+            }
+
+            int type = Lua.lua_type(L, -1);
+            if (type == Lua.TSTRING) {
+                string? str_val = lua_bridge.get_string(-1);
+                lua_bridge.pop();
+                if (str_val != null && str_val.length > 0) {
+                    var cmds = parse_entry(str_val);
+                    foreach (var c in cmds) {
+                        result += c;
+                    }
                 }
-            } catch (Error e) {
-                Logger.warning(@"Failed to apply CSS: $(e.message)");
+                return result;
             }
-        }
 
-        // --- Click handler ---
-
-        private void setup_click_handler(Gtk.Button btn, string widget_id, string func_name) {
-            btn.clicked.connect(() => {
-                lua_bridge.get_global(func_name);
-                if (lua_bridge.is_function(-1)) {
-                    lua_bridge.push_string(widget_id);
-                    lua_bridge.call(1, 0);
-                } else {
+            if (type == Lua.TTABLE) {
+                ulong raw_len = Lua.lua_rawlen(L, -1);
+                for (int i = 1; i <= (int) raw_len; i++) {
+                    Lua.lua_rawgeti(L, -1, i);
+                    string? entry = lua_bridge.get_string(-1);
+                    if (entry != null && entry.length > 0) {
+                        var cmds = parse_entry(entry);
+                        foreach (var c in cmds) {
+                            result += c;
+                        }
+                    }
                     lua_bridge.pop();
                 }
-            });
+            }
+
+            lua_bridge.pop();
+            return result;
         }
+
+        private static GLib.Regex? command_regex = null;
+
+        private Command[] parse_entry(string entry) {
+            try {
+                if (command_regex == null) {
+                    command_regex = new GLib.Regex("""^(\w+)\[(.*)\]$""", GLib.RegexCompileFlags.DOTALL);
+                }
+                GLib.MatchInfo match_info;
+                if (command_regex.match(entry, 0, out match_info) && match_info.matches()) {
+                    string cmd_type = match_info.fetch(1);
+                    string body = match_info.fetch(2);
+                    string[] parts = split_body(body);
+                    Command[] cmds = {};
+                    foreach (var part in parts) {
+                        string trimmed = part.strip();
+                        if (trimmed.length > 0) {
+                            cmds += Command() { type = cmd_type, body = trimmed };
+                        }
+                    }
+                    return cmds;
+                }
+            } catch (GLib.RegexError e) {
+                // fallthrough
+            }
+            // Plain string — backward compat, treat as events[func_name]
+            return { Command() { type = "events", body = entry.strip() } };
+        }
+
+        private string[] split_body(string body) {
+            string[] parts = {};
+            int depth = 0;
+            bool in_single_quote = false;
+            bool in_double_quote = false;
+            var current = new StringBuilder.sized(body.length);
+
+            unowned string remaining = body;
+            while (remaining != "") {
+                unichar c = remaining.get_char_validated();
+                if (c == (unichar)(-1) || c == (unichar)(-2)) break;
+
+                if (c == '\'' && !in_double_quote) {
+                    in_single_quote = !in_single_quote;
+                    current.append_unichar(c);
+                } else if (c == '"' && !in_single_quote) {
+                    in_double_quote = !in_double_quote;
+                    current.append_unichar(c);
+                } else if (!in_single_quote && !in_double_quote) {
+                    if (c == '(' || c == '[' || c == '{') {
+                        depth++;
+                        current.append_unichar(c);
+                    } else if (c == ')' || c == ']' || c == '}') {
+                        if (depth > 0) depth--;
+                        current.append_unichar(c);
+                    } else if (c == ',' && depth == 0) {
+                        string part = current.str.strip();
+                        if (part.length > 0) {
+                            parts += part;
+                        }
+                        current = new StringBuilder.sized(body.length);
+                    } else {
+                        current.append_unichar(c);
+                    }
+                } else {
+                    current.append_unichar(c);
+                }
+                remaining = remaining.next_char();
+            }
+
+            string last_part = current.str.strip();
+            if (last_part.length > 0) {
+                parts += last_part;
+            }
+
+            return parts;
+        }
+
+        private void execute_commands(Command[] commands, string source_id) {
+            foreach (var cmd in commands) {
+                switch (cmd.type) {
+                    case "events":
+                        lua_bridge.get_global(cmd.body);
+                        if (lua_bridge.is_function(-1)) {
+                            lua_bridge.push_string(source_id);
+                            lua_bridge.call(1, 0);
+                        } else {
+                            lua_bridge.pop();
+                            Logger.warning(@"Command 'events[$(cmd.body)]': function not found");
+                        }
+                        break;
+
+                    case "lua":
+                        if (!lua_bridge.do_string(cmd.body)) {
+                            Logger.warning(@"Command 'lua[$(cmd.body)]' failed");
+                        }
+                        break;
+
+                    case "bash":
+                        try {
+                            string escaped = cmd.body.replace("'", "'\\''");
+                            string full_cmd = @"bash -c '$(escaped)'";
+                            GLib.Process.spawn_command_line_async(full_cmd);
+                        } catch (GLib.Error e) {
+                            Logger.warning(@"Command 'bash[$(cmd.body)]' failed: $(e.message)");
+                        }
+                        break;
+
+                    default:
+                        Logger.warning(@"Unknown command type: '$(cmd.type)'");
+                        break;
+                }
+            }
+        }
+
+        // --- Timer ---
 
         private void setup_timer(string widget_id, double interval_sec) {
             uint interval_ms = (uint)(interval_sec * 1000);

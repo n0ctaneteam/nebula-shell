@@ -109,12 +109,15 @@ In addition to `anchor`, `visible`, and `height`, NebulaShell supports these con
 
 | Property    | Type            | Default          | Description                                    |
 |-------------|-----------------|------------------|------------------------------------------------|
-| `exclusive` | boolean         | varies by widget | Reserve space on the layer-shell edge          |
-| `anchor`    | string or array | varies           | Edge(s): `"top"`, `["top", "bottom"]`, `"center"` |
-| `margin`    | table           | (none)           | Edge distances: `{all: 4}`, `{top: 2, horizontal: 4}` |
-| `padding`   | table           | (none)           | Inner padding (same format as `margin`)        |
-| `size`      | string or table | `"auto"`         | Window size: `"auto"`, `{w: 400, h: 300}`, `"fill"` |
-| `overlay`   | table           | `{intensity: 4}` | Popup backdrop opacity (1-10)                  |
+| `exclusive`   | boolean         | varies by widget | Reserve space on the layer-shell edge          |
+| `anchor`      | string or array | varies           | Edge(s): `"top"`, `["top", "bottom"]`, `"center"` |
+| `margin`      | table           | (none)           | Edge distances: `{all: 4}`, `{top: 2, horizontal: 4}` |
+| `padding`     | table           | (none)           | Inner padding (same format as `margin`)        |
+| `size`        | string or table | `"auto"`         | Window size: `"auto"`, `{w: 400, h: 300}`, `"fill"` |
+| `blockInput`  | boolean         | `true` for dialog| Block input behind modal dialog                |
+| `shadow`      | table           | `{color: "#000000", alpha: 0.5}`  | Dialog shadow backdrop config      |
+| `autohide`    | number          | `0`              | Popover auto-hide delay in ms                  |
+| `showPointer` | boolean         | `false`          | Show pointer arrow on popover                  |
 
 ### Anchor format
 
@@ -222,14 +225,23 @@ NebulaShell uses standard GTK4 CSS for widget styling. Place your CSS in `styles
     background: linear-gradient(to right, #00ff00, #ffcc00, #ff0000);
 }
 
-/* Popup styling */
-.popup {
+/* Dialog styling */
+.dialog {
+    background: rgba(30, 30, 40, 0.97);
     border-radius: 8px;
     padding: 12px;
 }
 
-.popup-overlay {
-    background: rgba(0, 0, 0, 0.4);
+.dialog shadow {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* Popover styling */
+.popover {
+    background: rgba(40, 40, 50, 0.98);
+    border: 1px solid #555555;
+    border-radius: 6px;
+    padding: 8px;
 }
 ```
 
@@ -246,6 +258,7 @@ Refer to the [CSS Styling Examples](docs/examples.md#css-styling-reference) for 
 ```bash
 nebula-shell run [config.yaml]         # Run with default or custom config
 nebula-shell quit                      # Quit a running instance
+nebula-shell toggle <widget_id>        # Toggle a widget's visibility
 nebula-shell inspect [options]         # Inspect running widgets
 nebula-shell schema [options]          # Generate JSON Schema
 nebula-shell help                      # Show help
@@ -274,7 +287,8 @@ nebula-shell version                   # Show version
 |--------|-------------|----------------|
 | `nebula/bar` | Top/bottom bar | `id`, `style_class`, `anchor`, `exclusive`, `height`, `children` |
 | `nebula/panel` | Toggleable panel | `id`, `style_class`, `visible`, `anchor`, `exclusive`, `height`, `children` |
-| `nebula/popup` | Centered popup with backdrop | `id`, `style_class`, `anchor`, `size`, `overlay`, `margin`, `children` |
+| `nebula/dialog` | Modal dialog with shadow overlay | `id`, `style_class`, `size`, `blockInput`, `shadow`, `children` |
+| `nebula/popover` | Popover anchored to a parent widget | `id`, `style_class`, `autohide`, `showPointer`, `children` |
 | `nebula/clock` | Time display | `id`, `style_class`, `format`, `interval`, `on_click` |
 | `nebula/cpu` | CPU usage meter | `id`, `style_class`, `update_interval`, `warning_threshold`, `critical_threshold` |
 | `nebula/button` | Clickable button | `id`, `style_class`, `label`, `on_click` |

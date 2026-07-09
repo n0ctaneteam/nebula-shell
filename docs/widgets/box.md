@@ -10,6 +10,10 @@ The **box** widget is a container that arranges its children in a horizontal or 
 | `style_class` | `string` | `"box"` | CSS class(es) applied to the box container. |
 | `orientation` | `string` | `"horizontal"` | Layout direction. Must be `"horizontal"` (left-to-right) or `"vertical"` (top-to-bottom). |
 | `spacing` | `number` | `0` | Pixel spacing between child widgets. |
+| `anchor` | `any` | — | Anchors for layer-shell placement (passed through from parent window). |
+| `exclusive` | `boolean` | — | Whether the box should reserve edge space (passed through). |
+| `margin` | `table` | `{all: 0}` | CSS-like margin around the box: `{all: 4}`, `{top: 2}`, etc. |
+| `padding` | `table` | `{all: 0}` | CSS-like padding inside the box (same format as `margin`). |
 | `children` | `array` | `[]` | List of child widget configurations to arrange inside the box. |
 
 ## Usage Example
@@ -90,9 +94,13 @@ Creates a new box container configuration.
 
 - **`props`** (`table`) — Property table matching the schema above.
 - **`event_handlers`** (`table`) — Global event handler functions (passed through to children).
-- **`Returns`** (`table`) — The merged configuration table with internal metadata (`_type = "box"`).
+- **`Returns`** (`table`) — The merged configuration table with internal metadata.
 
-The `spacing` and `orientation` values are stored under `_spacing` and `_orientation` respectively for the WidgetBuilder to consume when creating the `Gtk.Box`.
+The function sets:
+- `config._type = "box"` — creates a `Gtk.Box`
+- `config._orientation = config.orientation` — passes orientation to the WidgetBuilder
+- `config._spacing = config.spacing` — passes spacing to the WidgetBuilder
+- `config._children = config.children` — child widget configs
 
 ### `M.destroy(config)`
 Logs a destruction message.
@@ -118,7 +126,7 @@ Merges provided properties with `M.defaults`.
 
 - **Child layout**: Children are appended to the `Gtk.Box` in declaration order. Horizontal boxes place children left-to-right; vertical boxes place children top-to-bottom.
 - **Nested containers**: Boxes can be nested to arbitrary depth, enabling complex grid-like layouts. Use horizontal boxes for toolbars and vertical boxes for panel content.
-- **Child expand/fill**: By default, `Gtk.Box` children are homogeneous (`false`) — each child takes only the space it needs. To make a child expand to fill available space, you may need to set `hexpand`/`vexpand` via CSS or GTK properties (check if the core engine exposes this).
+- **Child expand/fill**: By default, `Gtk.Box` children are not homogeneous — each child takes only the space it needs. To make a child expand to fill available space, you may need to set `hexpand`/`vexpand` via CSS or GTK properties.
 - **CSS styling**: The box is a standard `Gtk.Box` with the configured `style_class`. Style it for backgrounds, borders, margins, and padding:
   ```css
   .toolbar {
